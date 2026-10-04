@@ -151,6 +151,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 .stats b{display:block;font-family:var(--f-mono);font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stats span{font-size:12px;color:var(--muted)}
 .card{padding:16px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);display:grid;gap:12px}
+/* грид-колонка не шире карточки: длинная ссылка обрезается многоточием, а не раздвигает блок */
+.card,.sheet,.mcard,.otab,.plans,.list{grid-template-columns:minmax(0,1fr)}
+.card>*,.sheet>*{min-width:0}
+.card p{overflow-wrap:anywhere}
 .card h3{margin:0;font-size:15px}
 .card p{margin:0;color:var(--muted);font-size:13.5px}
 .bars{display:grid;gap:9px}
@@ -160,9 +164,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 .bars .track{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden}
 .bars .track div{height:100%;background:var(--tc);border-radius:3px}
 .bars .r b{font-family:var(--f-mono);font-weight:500;text-align:right;font-size:12.5px}
-.link{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.link{display:flex;gap:8px;align-items:center;min-width:0;max-width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .link code{flex:1;min-width:0;font-family:var(--f-mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent-hi)}
-.link button{font-size:12.5px;font-weight:700}
+.link button{flex:none;font-size:12.5px;font-weight:700}
 .daily{display:flex;align-items:center;gap:12px}
 .daily div{flex:1}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
@@ -521,7 +525,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       ${dailyCard()}
       <div class="label"><span>Пригласи друга</span><span>+${REF_SPINS} за каждого</span></div>
       <div class="card"><p>Друг запускает игру по вашей ссылке, а вы получаете ${REF_SPINS} ${spinsWord(REF_SPINS)}.</p>
-        <div class="link"><code id="refLink">${esc(link)}</code><button id="copyRef">Копировать</button></div>
+        <div class="link"><code id="refLink" data-full="${esc(link)}">${esc(link.replace(/^https:\/\//, ''))}</code><button id="copyRef">Копировать</button></div>
         <button class="btn btn-main" id="shareRef" data-link="${esc(link)}">Позвать друга</button></div>
       <div class="label"><span>Игра</span><span></span></div>
       <button class="btn btn-ghost" data-settings>Настройки игры</button>`;
@@ -758,7 +762,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     }
     if (t.id === 'balBtn') { if (UI.spinning) return; UI.tab = 'shop'; return render(); }
     if (t.id === 'copyRef') {
-      const link = $('#refLink').textContent;
+      const link = $('#refLink').dataset.full;
       try { await navigator.clipboard.writeText(link); toast('Ссылка скопирована'); }
       catch (err) { const r = document.createRange(); r.selectNodeContents($('#refLink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Выделили ссылку, скопируйте её'); }
       return;

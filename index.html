@@ -7,7 +7,7 @@
 <title>Барабан номеров</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Oswald:wght@500&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Roboto+Condensed:wght@600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; }
@@ -34,7 +34,9 @@ body { margin: 0; }
   --r5: #F7C9D9;
   --f-display: 'Unbounded', 'Manrope', system-ui, sans-serif;
   --f-body: 'Manrope', -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --f-plate: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --f-plate: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  --c: .711;
+  --lhv: .958;
   color-scheme: dark;
 }
 
@@ -112,27 +114,38 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .plate-wrap.pop { animation: pop .7s cubic-bezier(.3,1.5,.45,1); }
 @keyframes pop { 0% { transform: scale(.97); } 35% { transform: scale(1.045); } 100% { transform: scale(1); } }
 
-/* Russian licence plate, 520 × 112 mm proportions */
+/* Russian licence plate, 520 × 112 mm proportions.
+   Every character sits on one baseline: JS measures the font so each reel box spans exactly cap height. */
 .plate {
   position: relative; width: 100cqi; max-width: 100%; aspect-ratio: 520 / 112;
-  padding: 1cqi; border-radius: 2.4cqi;
-  background: var(--plate); color: var(--plate-ink);
-  box-shadow: 0 2.4cqi 6cqi rgba(8, 4, 8, .45), inset 0 -.5cqi 0 rgba(0,0,0,.08);
+  padding: 1.1cqi; border-radius: 2.8cqi;
+  background: var(--plate-ink); color: var(--plate-ink);
+  box-shadow: 0 2.4cqi 6cqi rgba(8, 4, 8, .45);
   overflow: hidden;
 }
-.plate-in { height: 100%; display: flex; border: .75cqi solid var(--plate-ink); border-radius: 1.7cqi; }
-.main { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: .9cqi; padding: 0 1.5cqi 1.9cqi; }
-.reg { width: 22.5%; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: .5cqi 0 1.4cqi; border-left: .75cqi solid var(--plate-ink); }
-.reel { display: block; height: 1em; line-height: 1; overflow: hidden; font-family: var(--f-plate); font-weight: 500; text-align: center; }
+.plate-in { height: 100%; display: flex; gap: .85cqi; }
+.main, .reg { background: var(--plate); border-radius: 1.7cqi; }
+.main { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.chars { display: flex; align-items: flex-end; }
+.reg { width: 21%; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1.9cqi 0 2cqi; }
+.reel {
+  --p: .06;
+  display: block; overflow: hidden; flex: none;
+  height: calc((var(--c) + 2 * var(--p)) * 1em);
+  margin-bottom: calc(var(--p) * -1em);
+  font-family: var(--f-plate); font-weight: 600; text-align: center;
+}
 .strip { display: flex; flex-direction: column; will-change: transform; }
-.strip span { display: block; height: 1em; }
-.reel.lg { font-size: 14.6cqi; width: .5em; }
-.reel.sm { font-size: 11.2cqi; width: .58em; margin-bottom: .05em; }
-.reel.sm + .reel.lg { margin-left: .9cqi; }
-.reel.lg + .reel.sm { margin-left: 1.4cqi; }
-.reel.rg { font-size: 10.6cqi; width: 100%; }
-.rus { display: flex; align-items: center; gap: .9cqi; font: 500 3.6cqi/1 var(--f-plate); letter-spacing: .06em; }
-.flag { width: 5.2cqi; height: 3.4cqi; border: .25cqi solid var(--plate-ink); background: linear-gradient(#FFFFFF 33.3%, #1C57B8 33.3% 66.6%, #D52B1E 66.6%); }
+.strip span { display: block; height: calc((var(--c) + 2 * var(--p)) * 1em); line-height: var(--lhv); white-space: nowrap; }
+.reel.lg { font-size: calc(14cqi / var(--c)); width: 9.6cqi; }
+.reel.sm { font-size: calc(12.2cqi / var(--c)); width: 10.6cqi; }
+.reel.lg + .reel.lg { margin-left: .8cqi; }
+.reel.sm + .reel.lg { margin-left: 2.6cqi; }
+.reel.lg + .reel.sm { margin-left: 3.2cqi; }
+.reel.sm + .reel.sm { margin-left: .4cqi; }
+.reel.rg { font-size: calc(7cqi / var(--c)); width: 100%; letter-spacing: -.02em; }
+.rus { display: flex; align-items: center; gap: 1cqi; font: 600 3.9cqi/1 var(--f-plate); letter-spacing: .04em; }
+.flag { width: 5.8cqi; height: 3.7cqi; border: .3cqi solid var(--plate-ink); border-radius: .5cqi; background: linear-gradient(#FFFFFF 33.3%, #1C57B8 33.3% 66.6%, #D52B1E 66.6%); }
 
 /* Sheen for the two top rarities */
 .plate::after {
@@ -196,6 +209,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .best { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--surface); }
 .best-row { display: flex; align-items: center; gap: 14px; }
 .best .mini { width: 170px; }
+.best .meta span { white-space: normal; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .tile { --c: var(--r0); display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); min-width: 0; font-size: 13px; }
 .tile i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
@@ -286,14 +300,14 @@ header { display: flex; align-items: center; justify-content: space-between; gap
         <div class="plate-wrap" id="plate-wrap">
           <div class="plate" id="plate" aria-live="polite" aria-label="">
             <div class="plate-in">
-              <div class="main">
+              <div class="main"><div class="chars">
                 <span class="reel sm"><span class="strip"></span></span>
                 <span class="reel lg"><span class="strip"></span></span>
                 <span class="reel lg"><span class="strip"></span></span>
                 <span class="reel lg"><span class="strip"></span></span>
                 <span class="reel sm"><span class="strip"></span></span>
                 <span class="reel sm"><span class="strip"></span></span>
-              </div>
+              </div></div>
               <div class="reg">
                 <span class="reel rg"><span class="strip"></span></span>
                 <span class="rus">RUS <i class="flag"></i></span>
@@ -675,9 +689,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   function miniPlate(p) {
     const c = charsOf(p);
     const r = (cls, ch) => '<span class="reel ' + cls + '"><span class="strip"><span>' + esc(ch) + '</span></span></span>';
-    return '<div class="mini"><div class="plate"><div class="plate-in"><div class="main">' +
+    return '<div class="mini"><div class="plate"><div class="plate-in"><div class="main"><div class="chars">' +
       r('sm', c[0]) + r('lg', c[1]) + r('lg', c[2]) + r('lg', c[3]) + r('sm', c[4]) + r('sm', c[5]) +
-      '</div><div class="reg">' + r('rg', c[6]) + '<span class="rus">RUS <i class="flag"></i></span></div></div></div></div>';
+      '</div></div><div class="reg">' + r('rg', c[6]) + '<span class="rus">RUS <i class="flag"></i></span></div></div></div></div>';
   }
 
   let filter = -1, confirmReset = false;
@@ -817,6 +831,25 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   scrim.addEventListener('click', closeSheet);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
   $('#rules').innerHTML = RULES.map((t, i) => '<li><i style="background:var(--r' + i + ')"></i><span><b>' + RARITIES[i].name + '.</b> ' + t + '</span></li>').join('');
+
+  /* ---------- Plate font metrics: put every glyph's baseline on the reel's bottom edge ---------- */
+  function fitPlateFont() {
+    try {
+      const probe = document.querySelector('#plate .reel');
+      const cs = getComputedStyle(probe);
+      const c2 = document.createElement('canvas').getContext('2d');
+      c2.font = cs.fontWeight + ' 200px ' + cs.fontFamily;
+      const m = c2.measureText('0123456789' + LETTERS);
+      const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent, C = m.actualBoundingBoxAscent;
+      if (!A || !C) return;
+      const c = C / 200, a = A / 200, d = D / 200, p = 0.06;
+      const root = document.documentElement.style;
+      root.setProperty('--c', c.toFixed(4));
+      root.setProperty('--lhv', (2 * (p + c) - a + d).toFixed(4));
+    } catch (e) {}
+  }
+  fitPlateFont();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPlateFont);
 
   /* ---------- Boot ---------- */
   spinBtn.addEventListener('click', spin);

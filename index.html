@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Барабан номеров</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Oswald:wght@500&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+@property --rc { syntax: '<color>'; inherits: true; initial-value: #9BE1D7; }
+
+/* One-screen mobile game: header, tabs, glowing stage with the plate, verdict, odds, spin button at the thumb */
+:root {
+  --bg: #2A2128;
+  --surface: #352A33;
+  --surface-2: #43363F;
+  --line: #54444F;
+  --fg: #F0E8D5;
+  --muted: #B5A9B0;
+  --accent: #9BE1D7;
+  --accent-ink: #172624;
+  --plate: #F5F5F5;
+  --plate-ink: #151515;
+  --r0: #B5A9B0;
+  --r1: #B8C277;
+  --r2: #9BE1D7;
+  --r3: #C8C2FE;
+  --r4: #EAA73A;
+  --r5: #F7C9D9;
+  --f-display: 'Unbounded', 'Manrope', system-ui, sans-serif;
+  --f-body: 'Manrope', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --f-plate: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+button { font-family: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  height: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px 12px; }
+.brand { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.brand h1 { margin: 0; font: 700 17px/1.1 var(--f-display); letter-spacing: -0.01em; }
+.brand span { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.icon-btn {
+  width: 42px; height: 42px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 13px; border: 1px solid var(--line);
+  background: var(--surface); cursor: pointer;
+  transition: transform .15s, background .2s;
+}
+.icon-btn:active { transform: scale(.94); }
+
+/* Tabs: one choice out of two, so a segmented control */
+.tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 14px; background: var(--surface); }
+.tabs .pill {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
+  border-radius: 10px; background: var(--surface-2);
+  transition: transform .4s cubic-bezier(.3,.9,.3,1);
+}
+.tabs[data-tab="coll"] .pill { transform: translateX(100%); }
+.tab { position: relative; z-index: 1; padding: 9px; border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; transition: color .25s; }
+.tab[aria-selected="true"] { color: var(--fg); }
+
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* Drum view */
+#drum { --rc: var(--accent); transition: --rc .8s ease; }
+#drum[data-r="0"] { --rc: var(--r0); }
+#drum[data-r="1"] { --rc: var(--r1); }
+#drum[data-r="2"] { --rc: var(--r2); }
+#drum[data-r="3"] { --rc: var(--r3); }
+#drum[data-r="4"] { --rc: var(--r4); }
+#drum[data-r="5"] { --rc: var(--r5); }
+.drum-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-block: 8px; }
+
+.stage { position: relative; container-type: inline-size; padding-block: 40px 34px; }
+.stage::before {
+  content: ""; position: absolute; inset: 0 -16px; pointer-events: none;
+  background: radial-gradient(58% 60% at 50% 50%, color-mix(in srgb, var(--rc) 38%, transparent), transparent 72%);
+  transition: opacity .6s ease;
+}
+.stage[data-state="spinning"]::before { opacity: .35; }
+#fx { position: absolute; top: -30%; left: -16px; width: calc(100% + 32px); height: 160%; pointer-events: none; z-index: 2; }
+
+.plate-wrap { position: relative; z-index: 1; transition: transform .5s cubic-bezier(.3,.9,.3,1); }
+.stage[data-state="spinning"] .plate-wrap { transform: scale(.97); }
+.plate-wrap.pop { animation: pop .7s cubic-bezier(.3,1.5,.45,1); }
+@keyframes pop { 0% { transform: scale(.97); } 35% { transform: scale(1.045); } 100% { transform: scale(1); } }
+
+/* Russian licence plate, 520 × 112 mm proportions */
+.plate {
+  position: relative; width: 100cqi; max-width: 100%; aspect-ratio: 520 / 112;
+  padding: 1cqi; border-radius: 2.4cqi;
+  background: var(--plate); color: var(--plate-ink);
+  box-shadow: 0 2.4cqi 6cqi rgba(8, 4, 8, .45), inset 0 -.5cqi 0 rgba(0,0,0,.08);
+  overflow: hidden;
+}
+.plate-in { height: 100%; display: flex; border: .75cqi solid var(--plate-ink); border-radius: 1.7cqi; }
+.main { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: .9cqi; padding: 0 1.5cqi 1.9cqi; }
+.reg { width: 22.5%; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: .5cqi 0 1.4cqi; border-left: .75cqi solid var(--plate-ink); }
+.reel { display: block; height: 1em; line-height: 1; overflow: hidden; font-family: var(--f-plate); font-weight: 500; text-align: center; }
+.strip { display: flex; flex-direction: column; will-change: transform; }
+.strip span { display: block; height: 1em; }
+.reel.lg { font-size: 14.6cqi; width: .5em; }
+.reel.sm { font-size: 11.2cqi; width: .58em; margin-bottom: .05em; }
+.reel.sm + .reel.lg { margin-left: .9cqi; }
+.reel.lg + .reel.sm { margin-left: 1.4cqi; }
+.reel.rg { font-size: 10.6cqi; width: 100%; }
+.rus { display: flex; align-items: center; gap: .9cqi; font: 500 3.6cqi/1 var(--f-plate); letter-spacing: .06em; }
+.flag { width: 5.2cqi; height: 3.4cqi; border: .25cqi solid var(--plate-ink); background: linear-gradient(#FFFFFF 33.3%, #1C57B8 33.3% 66.6%, #D52B1E 66.6%); }
+
+/* Sheen for the two top rarities */
+.plate::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(105deg, transparent 32%, rgba(234,167,58,.45) 46%, rgba(255,255,255,.7) 50%, rgba(234,167,58,.45) 54%, transparent 68%);
+  background-size: 300% 100%; background-position: 120% 0; mix-blend-mode: multiply;
+}
+#drum[data-r="4"] .stage.revealed .plate::after { opacity: 1; animation: sheen 1.4s .1s ease-out both; }
+#drum[data-r="5"] .stage.revealed .plate::after {
+  opacity: 1;
+  background-image: linear-gradient(105deg, transparent 25%, rgba(247,201,217,.75) 38%, rgba(200,194,254,.7) 50%, rgba(155,225,215,.75) 62%, transparent 75%);
+  animation: sheen 2.6s ease-in-out infinite;
+}
+@keyframes sheen { from { background-position: 120% 0; } to { background-position: -20% 0; } }
+
+/* Verdict */
+.verdict { min-height: 92px; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; }
+.verdict > * { margin: 0; }
+.rlabel { font: 700 25px/1.15 var(--f-display); letter-spacing: -.01em; color: var(--rc); text-wrap: balance; }
+.reason { font-size: 14.5px; font-weight: 600; color: var(--fg); max-width: 34ch; text-wrap: balance; }
+.region { font-size: 13px; color: var(--muted); }
+.verdict.hide > * { opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; }
+.verdict.in > * { animation: rise .55s cubic-bezier(.2,.9,.3,1) both; }
+.verdict.in > :nth-child(2) { animation-delay: .08s; }
+.verdict.in > :nth-child(3) { animation-delay: .16s; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Odds */
+.odds { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.odd {
+  --c: var(--r0);
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  padding: 9px 10px; border-radius: 12px; border: 1px solid transparent;
+  background: var(--surface); font-size: 12.5px;
+  transition: border-color .5s, background-color .5s;
+}
+.odd i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--c); }
+.odd b { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.odd span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.odd.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--surface)); }
+.odd[data-r="1"] { --c: var(--r1); }
+.odd[data-r="2"] { --c: var(--r2); }
+.odd[data-r="3"] { --c: var(--r3); }
+.odd[data-r="4"] { --c: var(--r4); }
+.odd[data-r="5"] { --c: var(--r5); }
+
+.spin-bar { padding-block: 12px 16px; }
+.spin {
+  width: 100%; height: 58px; border: 0; border-radius: 18px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink);
+  font: 700 17px var(--f-display); letter-spacing: .02em;
+  box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: transform .15s, filter .3s;
+}
+.spin:active { transform: scale(.97); }
+.spin:disabled { filter: saturate(.35) brightness(.8); cursor: default; }
+
+/* Collection */
+#coll { overflow-y: auto; gap: 16px; padding-block: 14px 20px; }
+.sec-title { margin: 0; font: 500 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.best { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--surface); }
+.best-row { display: flex; align-items: center; gap: 14px; }
+.best .mini { width: 170px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tile { --c: var(--r0); display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); min-width: 0; font-size: 13px; }
+.tile i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.tile b { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile span { font: 700 15px var(--f-display); font-variant-numeric: tabular-nums; }
+.tile[data-r="1"] { --c: var(--r1); } .tile[data-r="2"] { --c: var(--r2); } .tile[data-r="3"] { --c: var(--r3); } .tile[data-r="4"] { --c: var(--r4); } .tile[data-r="5"] { --c: var(--r5); }
+
+.filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.chip { flex: none; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.chip[aria-checked="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+
+.list { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface); animation: rise .4s cubic-bezier(.2,.9,.3,1) both; }
+.mini { width: 128px; flex: none; container-type: inline-size; }
+.mini .plate { box-shadow: 0 1.5cqi 3cqi rgba(8,4,8,.35); }
+.meta { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.meta b { font-size: 14px; font-weight: 700; }
+.meta span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { padding: 28px 18px; border-radius: 18px; border: 1px dashed var(--line); text-align: center; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.empty b { display: block; color: var(--fg); font-size: 15px; margin-bottom: 4px; }
+
+.reset { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 6px; }
+.text-btn { border: 0; background: none; color: var(--muted); font-size: 13.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px; }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; }
+.danger { border: 0; border-radius: 10px; padding: 8px 14px; background: #E07A7A; color: #2A1214; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.ghost { border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px; background: none; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+
+/* Settings sheet */
+.scrim { position: fixed; inset: 0; z-index: 19; background: rgba(14, 8, 14, .6); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  max-width: 460px; max-height: 86%; margin: 0 auto; overflow-y: auto;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0; background: var(--surface);
+  transform: translateY(105%); transition: transform .5s cubic-bezier(.2,.9,.25,1);
+  visibility: hidden;
+}
+.sheet.open { transform: none; visibility: visible; }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.sheet-head h2 { margin: 0; font: 700 18px var(--f-display); }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.set-row div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.set-row b { font-size: 15px; }
+.set-row small { font-size: 12.5px; color: var(--muted); }
+.sw-wrap { display: flex; align-items: center; gap: 10px; flex: none; }
+.sw-state { width: 3.2em; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.sw-state.on { color: var(--accent); }
+.switch { position: relative; width: 52px; height: 32px; flex: none; border: 0; border-radius: 16px; background: var(--line); cursor: pointer; transition: background .25s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--muted); box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: transform .35s cubic-bezier(.3,1.4,.5,1), background .25s; }
+.switch[aria-checked="true"] .knob { transform: translateX(20px); background: #FFFFFF; }
+.rules { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.rules ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; line-height: 1.45; }
+.rules li { display: flex; gap: 10px; }
+.rules li i { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; flex: none; }
+.rules p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Барабан номеров</h1>
+      <span id="counter">Круток: 0</span>
+    </div>
+    <button class="icon-btn" id="open-settings" aria-label="Настройки">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+  </header>
+
+  <div class="tabs" role="tablist" data-tab="drum" id="tabs">
+    <span class="pill" aria-hidden="true"></span>
+    <button class="tab" role="tab" id="tab-drum" aria-selected="true" aria-controls="drum">Барабан</button>
+    <button class="tab" role="tab" id="tab-coll" aria-selected="false" aria-controls="coll">Коллекция</button>
+  </div>
+
+  <section class="view" id="drum" role="tabpanel" aria-labelledby="tab-drum">
+    <div class="drum-scroll">
+      <div class="stage" id="stage">
+        <canvas id="fx" aria-hidden="true"></canvas>
+        <div class="plate-wrap" id="plate-wrap">
+          <div class="plate" id="plate" aria-live="polite" aria-label="">
+            <div class="plate-in">
+              <div class="main">
+                <span class="reel sm"><span class="strip"></span></span>
+                <span class="reel lg"><span class="strip"></span></span>
+                <span class="reel lg"><span class="strip"></span></span>
+                <span class="reel lg"><span class="strip"></span></span>
+                <span class="reel sm"><span class="strip"></span></span>
+                <span class="reel sm"><span class="strip"></span></span>
+              </div>
+              <div class="reg">
+                <span class="reel rg"><span class="strip"></span></span>
+                <span class="rus">RUS <i class="flag"></i></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="verdict" id="verdict">
+        <p class="rlabel" id="rlabel">Готов к прокрутке</p>
+        <p class="reason" id="reason">Шесть категорий, от обычного номера до эксклюзивного</p>
+        <p class="region" id="region">Нажмите «Крутить»</p>
+      </div>
+
+      <div class="odds" id="odds"></div>
+    </div>
+
+    <div class="spin-bar">
+      <button class="spin" id="spin">Крутить</button>
+    </div>
+  </section>
+
+  <section class="view" id="coll" role="tabpanel" aria-labelledby="tab-coll" hidden>
+    <div class="best" id="best"></div>
+    <h2 class="sec-title">По категориям</h2>
+    <div class="tiles" id="tiles"></div>
+    <h2 class="sec-title">История</h2>
+    <div class="filters" role="radiogroup" aria-label="Фильтр по редкости" id="filters"></div>
+    <div class="list" id="list"></div>
+    <div class="reset" id="reset"></div>
+  </section>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="grab"></div>
+  <div class="sheet-head">
+    <h2 id="sheet-title">Настройки</h2>
+    <button class="icon-btn" id="close-settings" aria-label="Закрыть">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="set-row">
+    <div><b>Звук</b><small>Щелчки барабана и мелодия выигрыша</small></div>
+    <div class="sw-wrap"><span class="sw-state" id="st-sound"></span><button class="switch" role="switch" id="sw-sound" aria-label="Звук"><span class="knob"></span></button></div>
+  </div>
+  <div class="set-row">
+    <div><b>Вибрация</b><small>Отклик на каждой остановке барабана</small></div>
+    <div class="sw-wrap"><span class="sw-state" id="st-vibe"></span><button class="switch" role="switch" id="sw-vibe" aria-label="Вибрация"><span class="knob"></span></button></div>
+  </div>
+  <div class="set-row">
+    <div><b>Быстрая прокрутка</b><small>Барабан останавливается вдвое быстрее</small></div>
+    <div class="sw-wrap"><span class="sw-state" id="st-fast"></span><button class="switch" role="switch" id="sw-fast" aria-label="Быстрая прокрутка"><span class="knob"></span></button></div>
+  </div>
+  <div class="rules">
+    <h3 class="sec-title">Как считается редкость</h3>
+    <ul id="rules"></ul>
+    <p>Буквы и цифры дают очки: одинаковые буквы, серии АМР и ЕКХ, номера 00X, три одинаковые цифры, круглые, зеркальные и цифры по порядку. Чем больше очков, тем выше категория.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- Telegram Mini App bridge (works without it too) ---------- */
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try {
+      tg.ready();
+      tg.expand();
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
+        tg.setHeaderColor('#2A2128');
+        tg.setBackgroundColor('#2A2128');
+      }
+      if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+    } catch (e) {}
+  }
+
+  /* ---------- Data ---------- */
+  const LETTERS = 'АВЕКМНОРСТУХ';
+  const VIP = ['АМР', 'ЕКХ'];
+  const RARITIES = [
+    { name: 'Обычный',      chance: 52 },
+    { name: 'Необычный',    chance: 26 },
+    { name: 'Редкий',       chance: 13 },
+    { name: 'Эпический',    chance: 6 },
+    { name: 'Легендарный',  chance: 2.5 },
+    { name: 'Эксклюзивный', chance: 0.5 }
+  ];
+  const RULES = [
+    'Без закономерностей',
+    'Круглые, зеркальные цифры или цифры по порядку, либо пара цифр и пара букв',
+    'Три одинаковые цифры, три одинаковые буквы, серия АМР/ЕКХ, либо красивые цифры и пара букв',
+    'Номер 00X, три одинаковые цифры и пара букв, либо три одинаковые буквы и пара цифр',
+    'Три одинаковые буквы или серия АМР/ЕКХ и красивые цифры, либо 00X и пара букв',
+    'Три одинаковые буквы или серия АМР/ЕКХ и номер 00X или три одинаковые цифры'
+  ];
+  const REGIONS = [
+    ['01','Адыгея'],['02','Башкортостан'],['102','Башкортостан'],['702','Башкортостан'],['03','Бурятия'],['04','Республика Алтай'],
+    ['05','Дагестан'],['06','Ингушетия'],['07','Кабардино-Балкария'],['08','Калмыкия'],['09','Карачаево-Черкесия'],['10','Карелия'],
+    ['11','Коми'],['12','Марий Эл'],['13','Мордовия'],['14','Якутия'],['15','Северная Осетия'],['16','Татарстан'],['116','Татарстан'],
+    ['716','Татарстан'],['17','Тыва'],['18','Удмуртия'],['19','Хакасия'],['20','Чечня'],['95','Чечня'],['21','Чувашия'],
+    ['22','Алтайский край'],['23','Краснодарский край'],['93','Краснодарский край'],['123','Краснодарский край'],['24','Красноярский край'],
+    ['124','Красноярский край'],['25','Приморский край'],['125','Приморский край'],['26','Ставропольский край'],['126','Ставропольский край'],
+    ['27','Хабаровский край'],['28','Амурская область'],['29','Архангельская область'],['30','Астраханская область'],['31','Белгородская область'],
+    ['32','Брянская область'],['33','Владимирская область'],['34','Волгоградская область'],['134','Волгоградская область'],['35','Вологодская область'],
+    ['36','Воронежская область'],['136','Воронежская область'],['37','Ивановская область'],['38','Иркутская область'],['138','Иркутская область'],
+    ['39','Калининградская область'],['40','Калужская область'],['41','Камчатский край'],['42','Кемеровская область'],['142','Кемеровская область'],
+    ['43','Кировская область'],['44','Костромская область'],['45','Курганская область'],['46','Курская область'],['47','Ленинградская область'],
+    ['147','Ленинградская область'],['48','Липецкая область'],['49','Магаданская область'],['50','Московская область'],['90','Московская область'],
+    ['150','Московская область'],['190','Московская область'],['750','Московская область'],['790','Московская область'],['51','Мурманская область'],
+    ['52','Нижегородская область'],['152','Нижегородская область'],['53','Новгородская область'],['54','Новосибирская область'],['154','Новосибирская область'],
+    ['55','Омская область'],['56','Оренбургская область'],['57','Орловская область'],['58','Пензенская область'],['59','Пермский край'],
+    ['159','Пермский край'],['60','Псковская область'],['61','Ростовская область'],['161','Ростовская область'],['761','Ростовская область'],
+    ['62','Рязанская область'],['63','Самарская область'],['163','Самарская область'],['763','Самарская область'],['64','Саратовская область'],
+    ['164','Саратовская область'],['65','Сахалинская область'],['66','Свердловская область'],['96','Свердловская область'],['196','Свердловская область'],
+    ['67','Смоленская область'],['68','Тамбовская область'],['69','Тверская область'],['70','Томская область'],['71','Тульская область'],
+    ['72','Тюменская область'],['73','Ульяновская область'],['74','Челябинская область'],['174','Челябинская область'],['774','Челябинская область'],
+    ['75','Забайкальский край'],['76','Ярославская область'],['77','Москва'],['97','Москва'],['99','Москва'],['177','Москва'],['197','Москва'],
+    ['199','Москва'],['777','Москва'],['797','Москва'],['799','Москва'],['977','Москва'],['78','Санкт-Петербург'],['98','Санкт-Петербург'],
+    ['178','Санкт-Петербург'],['198','Санкт-Петербург'],['79','Еврейская АО'],['83','Ненецкий АО'],['86','Ханты-Мансийский АО — Югра'],
+    ['186','Ханты-Мансийский АО — Югра'],['87','Чукотский АО'],['89','Ямало-Ненецкий АО']
+  ];
+  const REGION_NAME = Object.fromEntries(REGIONS);
+
+  /* ---------- Helpers ---------- */
+  const $ = (s) => document.querySelector(s);
+  const ri = (n) => Math.floor(Math.random() * n);
+  const pick = (arr) => arr[ri(arr.length)];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const css = getComputedStyle(document.documentElement);
+  const rColor = (i) => css.getPropertyValue('--r' + i).trim();
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  /* ---------- Rarity logic ---------- */
+  function digitPattern(d) {
+    const a = +d[0], b = +d[1], c = +d[2];
+    if (a === 0 && b === 0) return { s: 4, k: '00x' };
+    if (a === b && b === c) return { s: 3, k: 'triple' };
+    if ((b === 0 && c === 0) || (a === 0 && c === 0)) return { s: 2, k: 'round' };
+    if ((b - a === 1 && c - b === 1) || (a - b === 1 && b - c === 1)) return { s: 2, k: 'seq' };
+    if (a === c) return { s: 2, k: 'mirror' };
+    if (a === b || b === c) return { s: 1, k: 'pair' };
+    return { s: 0, k: 'none' };
+  }
+  function letterPattern(l) {
+    if (l[0] === l[1] && l[1] === l[2]) return { s: 3, k: 'all' };
+    if (VIP.includes(l)) return { s: 3, k: 'vip' };
+    if (l[0] === l[1] || l[1] === l[2] || l[0] === l[2]) return { s: 1, k: 'two' };
+    return { s: 0, k: 'none' };
+  }
+  function tierOf(score) {
+    if (score >= 6) return 5;
+    if (score === 5) return 4;
+    if (score === 4) return 3;
+    if (score === 3) return 2;
+    if (score === 2) return 1;
+    return 0;
+  }
+  const classify = (p) => tierOf(letterPattern(p.l).s + digitPattern(p.d).s);
+
+  function reasonText(p) {
+    const lp = letterPattern(p.l), dp = digitPattern(p.d);
+    const parts = [];
+    if (lp.k === 'all') parts.push('три одинаковые буквы');
+    if (lp.k === 'vip') parts.push('серия ' + p.l);
+    if (lp.k === 'two') parts.push('пара одинаковых букв');
+    const dm = { '00x': 'номер ' + p.d, triple: 'три одинаковые цифры', round: 'круглый номер', seq: 'цифры по порядку', mirror: 'зеркальный номер', pair: 'пара одинаковых цифр' };
+    if (dm[dp.k]) parts.push(dm[dp.k]);
+    if (!parts.length) return 'Без закономерностей. В следующий раз повезёт';
+    const t = parts.join(' + ');
+    return t[0].toUpperCase() + t.slice(1);
+  }
+
+  const L_KINDS = [{ k: 'none', s: 0 }, { k: 'two', s: 1 }, { k: 'all', s: 3 }, { k: 'vip', s: 3 }];
+  const D_KINDS = [{ k: 'none', s: 0 }, { k: 'pair', s: 1 }, { k: 'mirror', s: 2 }, { k: 'seq', s: 2 }, { k: 'round', s: 2 }, { k: 'triple', s: 3 }, { k: '00x', s: 4 }];
+
+  function buildLetters(kind) {
+    const L = LETTERS.split('');
+    if (kind === 'all') { const x = pick(L); return x + x + x; }
+    if (kind === 'vip') return pick(VIP);
+    if (kind === 'two') {
+      const x = pick(L); let y; do { y = pick(L); } while (y === x);
+      return pick([x + x + y, x + y + x, y + x + x]);
+    }
+    return pick(L) + pick(L) + pick(L);
+  }
+  function buildDigits(kind) {
+    const nz = () => 1 + ri(9);
+    const d = () => ri(10);
+    if (kind === '00x') return '00' + nz();
+    if (kind === 'triple') { const x = nz(); return '' + x + x + x; }
+    if (kind === 'round') { const x = nz(); return Math.random() < .7 ? x + '00' : '0' + x + '0'; }
+    if (kind === 'seq') { const s = ri(8); const up = '' + s + (s + 1) + (s + 2); return Math.random() < .5 ? up : up.split('').reverse().join(''); }
+    if (kind === 'mirror') { const x = nz(); let y; do { y = d(); } while (y === x); return '' + x + y + x; }
+    if (kind === 'pair') { const x = d(); let y; do { y = d(); } while (y === x); return pick(['' + x + x + y, '' + y + x + x]); }
+    let s; do { s = '' + d() + d() + d(); } while (s === '000'); return s;
+  }
+
+  function rollTier() {
+    let r = Math.random() * 100;
+    for (let i = RARITIES.length - 1; i >= 0; i--) { if (r < RARITIES[i].chance) return i; r -= RARITIES[i].chance; }
+    return 0;
+  }
+  function makePlate(tier) {
+    const combos = [];
+    L_KINDS.forEach((l) => D_KINDS.forEach((dk) => { if (tierOf(l.s + dk.s) === tier) combos.push([l.k, dk.k]); }));
+    for (let i = 0; i < 400; i++) {
+      const [lk, dk] = pick(combos);
+      const p = { l: buildLetters(lk), d: buildDigits(dk), r: pick(REGIONS)[0] };
+      if (classify(p) === tier) return p;
+    }
+    return { l: 'ВКН', d: '358', r: '66' };
+  }
+
+  /* ---------- State ---------- */
+  const KEY = 'baraban-nomerov.v1';
+  const fresh = () => ({ spins: 0, counts: [0, 0, 0, 0, 0, 0], history: [], best: null, settings: { sound: true, vibe: true, fast: false } });
+  let state = fresh();
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const s = JSON.parse(raw); state = Object.assign(fresh(), s); state.settings = Object.assign(fresh().settings, s.settings || {}); }
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  /* ---------- Sound ---------- */
+  let ac = null;
+  function ensureAudio() {
+    if (!state.settings.sound) return;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { ac = null; }
+  }
+  function tone(freq, dur, type, vol, when) {
+    if (!state.settings.sound || !ac) return;
+    const t = ac.currentTime + (when || 0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.06, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  let tickTimer = null;
+  function startTicks() {
+    let gap = 45;
+    const step = () => { tone(2400, 0.018, 'square', 0.012); gap = Math.min(gap * 1.06, 170); tickTimer = setTimeout(step, gap); };
+    step();
+  }
+  const stopTicks = () => { clearTimeout(tickTimer); tickTimer = null; };
+  const clack = (i) => tone(900 + i * 70, 0.06, 'triangle', 0.07);
+  function fanfare(tier) {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
+    const n = Math.max(1, tier + 1);
+    for (let i = 0; i < n; i++) tone(notes[i], 0.32 + i * 0.03, tier >= 4 ? 'sine' : 'triangle', 0.06, i * 0.085);
+    if (tier === 5) for (let i = 0; i < 6; i++) tone(2093 + i * 260, 0.25, 'sine', 0.025, 0.55 + i * 0.06);
+  }
+
+  /* ---------- Haptics ---------- */
+  function haptic(kind) {
+    if (!state.settings.vibe) return;
+    const h = tg && tg.HapticFeedback;
+    try {
+      if (h && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
+        if (kind === 'success' || kind === 'warning' || kind === 'error') h.notificationOccurred(kind);
+        else h.impactOccurred(kind);
+        return;
+      }
+      if (navigator.vibrate) navigator.vibrate(kind === 'success' ? [18, 50, 28] : kind === 'heavy' ? 30 : 8);
+    } catch (e) {}
+  }
+
+  /* ---------- Plate & reels ---------- */
+  const reels = Array.from(document.querySelectorAll('#plate .reel'));
+  const POOLS = [LETTERS, '0123456789', '0123456789', '0123456789', LETTERS, LETTERS, null];
+  const charsOf = (p) => [p.l[0], p.d[0], p.d[1], p.d[2], p.l[1], p.l[2], p.r];
+
+  function setPlate(p) {
+    charsOf(p).forEach((c, i) => {
+      const strip = reels[i].firstElementChild;
+      strip.style.transition = 'none';
+      strip.style.transform = 'none';
+      strip.innerHTML = '<span>' + c + '</span>';
+      reels[i].dataset.cur = c;
+    });
+    $('#plate').setAttribute('aria-label', 'Номер ' + p.l[0] + ' ' + p.d + ' ' + p.l.slice(1) + ', регион ' + p.r);
+  }
+
+  function spinReel(i, target, fast) {
+    const reel = reels[i], strip = reel.firstElementChild;
+    const pool = POOLS[i] ? POOLS[i].split('') : REGIONS.map((r) => r[0]);
+    const n = (fast ? 9 : 16) + i * (fast ? 2 : 3);
+    const items = [reel.dataset.cur || target];
+    for (let k = 0; k < n; k++) items.push(pick(pool));
+    items.push(target, pick(pool));
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateY(0)';
+    strip.innerHTML = items.map((c) => '<span>' + c + '</span>').join('');
+    void strip.offsetHeight;
+    const dur = (fast ? 650 : 1350) + i * (fast ? 85 : 170);
+    strip.style.transition = 'transform ' + dur + 'ms cubic-bezier(.15,.8,.22,1.04)';
+    strip.style.transform = 'translateY(' + (-(items.length - 2) / items.length * 100) + '%)';
+    return new Promise((res) => {
+      setTimeout(() => {
+        strip.style.transition = 'none';
+        strip.style.transform = 'none';
+        strip.innerHTML = '<span>' + target + '</span>';
+        reel.dataset.cur = target;
+        clack(i);
+        haptic(i === 6 ? 'medium' : 'light');
+        res();
+      }, dur + 60);
+    });
+  }
+
+  /* ---------- Particles ---------- */
+  const fx = $('#fx'), ctx = fx.getContext('2d');
+  let parts = [], raf = 0;
+  function sizeFx() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = fx.getBoundingClientRect();
+    fx.width = Math.round(r.width * dpr); fx.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return r;
+  }
+  function burst(tier) {
+    if (reduceMotion || tier < 3) return;
+    const r = sizeFx();
+    const colors = tier === 5 ? [rColor(5), rColor(3), rColor(2), rColor(4), '#FFFFFF'] : [rColor(tier), '#FFFFFF', rColor(tier)];
+    const count = tier === 5 ? 140 : tier === 4 ? 90 : 46;
+    const cx = r.width / 2, cy = r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = (tier === 5 ? 5.5 : 4.2) * (0.35 + Math.random());
+      parts.push({ x: cx + (Math.random() - .5) * r.width * .5, y: cy + (Math.random() - .5) * 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2.4, s: 3 + Math.random() * 5, rot: Math.random() * 6, vr: (Math.random() - .5) * .3, life: 1, decay: .008 + Math.random() * .012, c: pick(colors), round: Math.random() < .35 });
+    }
+    if (!raf) raf = requestAnimationFrame(loop);
+  }
+  function loop() {
+    const w = fx.width, h = fx.height;
+    ctx.clearRect(0, 0, w, h);
+    parts = parts.filter((p) => p.life > 0);
+    parts.forEach((p) => {
+      p.vy += 0.11; p.vx *= 0.985; p.vy *= 0.985;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= p.decay;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.4));
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.c;
+      if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.s / 2, 0, Math.PI * 2); ctx.fill(); }
+      else ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      ctx.restore();
+    });
+    raf = parts.length ? requestAnimationFrame(loop) : 0;
+    if (!raf) ctx.clearRect(0, 0, w, h);
+  }
+
+  /* ---------- Rendering ---------- */
+  const drum = $('#drum'), stage = $('#stage'), verdict = $('#verdict'), spinBtn = $('#spin'), plateWrap = $('#plate-wrap');
+
+  function renderOdds(active) {
+    $('#odds').innerHTML = RARITIES.map((r, i) =>
+      '<div class="odd' + (i === active ? ' on' : '') + '" data-r="' + i + '"><i></i><b>' + r.name + '</b><span>' + String(r.chance).replace('.', ',') + '%</span></div>'
+    ).join('');
+  }
+  function renderCounter() { $('#counter').textContent = 'Круток: ' + state.spins.toLocaleString('ru-RU'); }
+
+  function showVerdict(p, tier) {
+    $('#rlabel').textContent = RARITIES[tier].name;
+    $('#reason').textContent = reasonText(p);
+    $('#region').textContent = 'Регион ' + p.r + ' · ' + (REGION_NAME[p.r] || '');
+  }
+
+  function miniPlate(p) {
+    const c = charsOf(p);
+    const r = (cls, ch) => '<span class="reel ' + cls + '"><span class="strip"><span>' + esc(ch) + '</span></span></span>';
+    return '<div class="mini"><div class="plate"><div class="plate-in"><div class="main">' +
+      r('sm', c[0]) + r('lg', c[1]) + r('lg', c[2]) + r('lg', c[3]) + r('sm', c[4]) + r('sm', c[5]) +
+      '</div><div class="reg">' + r('rg', c[6]) + '<span class="rus">RUS <i class="flag"></i></span></div></div></div></div>';
+  }
+
+  let filter = -1, confirmReset = false;
+  function renderCollection() {
+    const best = state.best;
+    $('#best').innerHTML = '<h2 class="sec-title">Лучший улов</h2>' + (best
+      ? '<div class="best-row">' + miniPlate(best) + '<div class="meta"><b style="color:var(--r' + best.t + ')">' + RARITIES[best.t].name + '</b><span>' + esc(reasonText(best)) + '</span></div></div>'
+      : '<div class="meta"><span>Пока пусто. Первая прокрутка сразу попадёт сюда.</span></div>');
+
+    $('#tiles').innerHTML = RARITIES.map((r, i) => '<div class="tile" data-r="' + i + '"><i></i><b>' + r.name + '</b><span>' + state.counts[i] + '</span></div>').join('');
+
+    const opts = [{ v: -1, n: 'Все' }].concat(RARITIES.map((r, i) => ({ v: i, n: r.name })));
+    $('#filters').innerHTML = opts.map((o) => '<button class="chip" role="radio" aria-checked="' + (o.v === filter) + '" data-v="' + o.v + '">' + o.n + '</button>').join('');
+
+    const items = state.history.filter((h) => filter < 0 || h.t === filter);
+    $('#list').innerHTML = items.length
+      ? items.slice(0, 60).map((h, i) => '<div class="row" style="animation-delay:' + Math.min(i, 8) * 30 + 'ms">' + miniPlate(h) + '<div class="meta"><b style="color:var(--r' + h.t + ')">' + RARITIES[h.t].name + '</b><span>' + esc(REGION_NAME[h.r] || 'Регион ' + h.r) + '</span></div></div>').join('')
+      : '<div class="empty"><b>' + (state.history.length ? 'В этой категории пока ничего' : 'История пуста') + '</b>' + (state.history.length ? 'Крутите дальше, она ещё выпадет.' : 'Здесь появятся номера, которые выпадут на барабане.') + '</div>';
+
+    $('#reset').innerHTML = !state.history.length ? '' : confirmReset
+      ? '<div class="confirm"><span>Удалить историю и счётчики?</span><button class="danger" id="do-reset">Да, сбросить</button><button class="ghost" id="no-reset">Отмена</button></div>'
+      : '<button class="text-btn" id="ask-reset">Сбросить коллекцию</button>';
+  }
+
+  /* ---------- Spin ---------- */
+  let spinning = false;
+  async function spin() {
+    if (spinning) return;
+    spinning = true;
+    ensureAudio();
+    haptic('rigid');
+    const tier = rollTier();
+    const p = makePlate(tier);
+    const fast = state.settings.fast || reduceMotion;
+
+    spinBtn.disabled = true;
+    spinBtn.textContent = 'Крутится…';
+    stage.dataset.state = 'spinning';
+    stage.classList.remove('revealed');
+    plateWrap.classList.remove('pop');
+    verdict.classList.remove('in');
+    verdict.classList.add('hide');
+    renderOdds(-1);
+    startTicks();
+
+    const chars = charsOf(p);
+    await Promise.all(chars.map((c, i) => spinReel(i, c, fast)));
+    stopTicks();
+
+    // Reveal
+    stage.dataset.state = 'done';
+    drum.dataset.r = tier;
+    void plateWrap.offsetWidth;
+    plateWrap.classList.add('pop');
+    stage.classList.add('revealed');
+    showVerdict(p, tier);
+    verdict.classList.remove('hide');
+    void verdict.offsetWidth;
+    verdict.classList.add('in');
+    renderOdds(tier);
+    $('#plate').setAttribute('aria-label', 'Номер ' + p.l[0] + ' ' + p.d + ' ' + p.l.slice(1) + ', регион ' + p.r + ', ' + RARITIES[tier].name);
+    burst(tier);
+    fanfare(tier);
+    if (tier >= 4) haptic('heavy');
+    if (tier >= 2) setTimeout(() => haptic('success'), 120);
+
+    const rec = { l: p.l, d: p.d, r: p.r, t: tier, ts: Date.now() };
+    state.spins++;
+    state.counts[tier]++;
+    state.history.unshift(rec);
+    if (state.history.length > 150) state.history.length = 150;
+    if (!state.best || tier >= state.best.t) state.best = rec;
+    save();
+    renderCounter();
+
+    spinBtn.disabled = false;
+    spinBtn.textContent = 'Крутить ещё';
+    spinning = false;
+  }
+
+  /* ---------- Tabs ---------- */
+  function showTab(name) {
+    $('#tabs').dataset.tab = name;
+    $('#tab-drum').setAttribute('aria-selected', name === 'drum');
+    $('#tab-coll').setAttribute('aria-selected', name === 'coll');
+    $('#drum').hidden = name !== 'drum';
+    $('#coll').hidden = name !== 'coll';
+    if (name === 'coll') { confirmReset = false; renderCollection(); }
+    haptic('soft');
+  }
+  $('#tab-drum').addEventListener('click', () => showTab('drum'));
+  $('#tab-coll').addEventListener('click', () => showTab('coll'));
+
+  $('#coll').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (chip) { filter = +chip.dataset.v; renderCollection(); haptic('soft'); return; }
+    if (e.target.id === 'ask-reset') { confirmReset = true; renderCollection(); }
+    else if (e.target.id === 'no-reset') { confirmReset = false; renderCollection(); }
+    else if (e.target.id === 'do-reset') {
+      const settings = state.settings;
+      state = fresh(); state.settings = settings; save();
+      confirmReset = false; filter = -1;
+      renderCollection(); renderCounter();
+      haptic('warning');
+    }
+  });
+
+  /* ---------- Settings sheet ---------- */
+  const sheet = $('#sheet'), scrim = $('#scrim');
+  function setSwitch(key) {
+    const on = !!state.settings[key];
+    $('#sw-' + key).setAttribute('aria-checked', on);
+    const st = $('#st-' + key);
+    st.textContent = on ? 'Вкл' : 'Выкл';
+    st.classList.toggle('on', on);
+  }
+  ['sound', 'vibe', 'fast'].forEach((key) => {
+    setSwitch(key);
+    $('#sw-' + key).addEventListener('click', () => {
+      state.settings[key] = !state.settings[key];
+      setSwitch(key); save();
+      if (key === 'sound' && state.settings.sound) { ensureAudio(); tone(880, .08, 'triangle', .05); }
+      if (key === 'vibe' && state.settings.vibe) haptic('medium');
+    });
+  });
+  const onBack = () => closeSheet();
+  function openSheet() {
+    sheet.classList.add('open'); scrim.classList.add('open');
+    if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { tg.BackButton.show(); tg.BackButton.onClick(onBack); }
+  }
+  function closeSheet() {
+    sheet.classList.remove('open'); scrim.classList.remove('open');
+    if (tg && tg.BackButton && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { tg.BackButton.offClick(onBack); tg.BackButton.hide(); }
+  }
+  $('#open-settings').addEventListener('click', openSheet);
+  $('#close-settings').addEventListener('click', closeSheet);
+  scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  $('#rules').innerHTML = RULES.map((t, i) => '<li><i style="background:var(--r' + i + ')"></i><span><b>' + RARITIES[i].name + '.</b> ' + t + '</span></li>').join('');
+
+  /* ---------- Boot ---------- */
+  spinBtn.addEventListener('click', spin);
+  const last = state.history[0];
+  if (last) {
+    setPlate(last);
+    drum.dataset.r = last.t;
+    showVerdict(last, last.t);
+    renderOdds(last.t);
+    spinBtn.textContent = 'Крутить ещё';
+  } else {
+    setPlate({ l: 'ВКН', d: '358', r: '66' });
+    renderOdds(-1);
+  }
+  renderCounter();
+  window.addEventListener('resize', () => { if (parts.length) sizeFx(); });
+})();
+</script>
+
+</body>
+</html>

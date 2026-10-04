@@ -37,6 +37,9 @@ body { margin: 0; }
   --f-plate: 'Roboto Condensed', 'Arial Narrow', sans-serif;
   --c: .711;
   --lhv: .958;
+  --lw: .78;
+  --dw: .52;
+  --k: 1;
   color-scheme: dark;
 }
 
@@ -130,19 +133,20 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .reg { width: 21%; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1.9cqi 0 2cqi; }
 .reel {
   --p: .06;
-  display: block; overflow: hidden; flex: none;
+  display: block; flex: none;
+  -webkit-clip-path: inset(0 -40%); clip-path: inset(0 -40%);
   height: calc((var(--c) + 2 * var(--p)) * 1em);
   margin-bottom: calc(var(--p) * -1em);
   font-family: var(--f-plate); font-weight: 600; text-align: center;
 }
 .strip { display: flex; flex-direction: column; will-change: transform; }
 .strip span { display: block; height: calc((var(--c) + 2 * var(--p)) * 1em); line-height: var(--lhv); white-space: nowrap; }
-.reel.lg { font-size: calc(14cqi / var(--c)); width: 9.6cqi; }
-.reel.sm { font-size: calc(12.2cqi / var(--c)); width: 10.6cqi; }
-.reel.lg + .reel.lg { margin-left: .8cqi; }
-.reel.sm + .reel.lg { margin-left: 2.6cqi; }
-.reel.lg + .reel.sm { margin-left: 3.2cqi; }
-.reel.sm + .reel.sm { margin-left: .4cqi; }
+.reel.lg { font-size: calc(13.8cqi * var(--k) / var(--c)); width: calc(var(--dw) * 1em); }
+.reel.sm { font-size: calc(11.8cqi * var(--k) / var(--c)); width: calc(var(--lw) * 1em); }
+.reel.lg + .reel.lg { margin-left: calc(.6cqi * var(--k)); }
+.reel.sm + .reel.lg { margin-left: calc(2.2cqi * var(--k)); }
+.reel.lg + .reel.sm { margin-left: calc(2.8cqi * var(--k)); }
+.reel.sm + .reel.sm { margin-left: calc(.3cqi * var(--k)); }
 .reel.rg { font-size: calc(7cqi / var(--c)); width: 100%; letter-spacing: -.02em; }
 .rus { display: flex; align-items: center; gap: 1cqi; font: 600 3.9cqi/1 var(--f-plate); letter-spacing: .04em; }
 .flag { width: 5.8cqi; height: 3.7cqi; border: .3cqi solid var(--plate-ink); border-radius: .5cqi; background: linear-gradient(#FFFFFF 33.3%, #1C57B8 33.3% 66.6%, #D52B1E 66.6%); }
@@ -843,9 +847,17 @@ header { display: flex; align-items: center; justify-content: space-between; gap
       const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent, C = m.actualBoundingBoxAscent;
       if (!A || !C) return;
       const c = C / 200, a = A / 200, d = D / 200, p = 0.06;
+      const widest = (set) => Math.max.apply(null, set.split('').map((ch) => c2.measureText(ch).width)) / 200;
       const root = document.documentElement.style;
       root.setProperty('--c', c.toFixed(4));
       root.setProperty('--lhv', (2 * (p + c) - a + d).toFixed(4));
+      root.setProperty('--lw', (widest(LETTERS) + 0.02).toFixed(4));
+      root.setProperty('--dw', (widest('0123456789') + 0.02).toFixed(4));
+      // Shrink the whole row a little if a wide font would not fit the white panel
+      root.setProperty('--k', '1');
+      const main = document.querySelector('#plate .main'), row = document.querySelector('#plate .chars');
+      const room = main.clientWidth * 0.94, need = row.scrollWidth;
+      if (need > room && room > 0) root.setProperty('--k', (room / need).toFixed(4));
     } catch (e) {}
   }
   fitPlateFont();

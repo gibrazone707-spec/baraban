@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Ruletka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Manrope:wght@400;500;600;700&family=Barlow:wght@600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: ночная трасса — асфальтовый фон, номер в центре как единственный светлый объект, цвет редкости подсвечивает только выигрыш */
+:root{
+  --bg:#0c0f13; --panel:#141a21; --panel-2:#1b232c; --line:#26303b;
+  --text:#e8edf2; --muted:#8b97a5; --faint:#56616e;
+  --accent:#2f6bff; --accent-hi:#5b8cff; --on-accent:#ffffff;
+  --plate:#f6f6f1; --plate-ink:#111417;
+  --c-common:#a3acb7; --c-uncommon:#43c983; --c-rare:#4aa3ff; --c-blat:#b06cff; --c-excl:#ffb320;
+  --f-display:"Russo One","Arial Black",system-ui,sans-serif;
+  --f-body:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-plate:"Barlow","DIN Alternate","Arial",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:14px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent-hi);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:8px calc(96px + env(safe-area-inset-bottom,0px))}
+
+/* tiers */
+.t-common{--tc:var(--c-common)} .t-uncommon{--tc:var(--c-uncommon)} .t-rare{--tc:var(--c-rare)} .t-blat{--tc:var(--c-blat)} .t-excl{--tc:var(--c-excl)}
+
+/* header */
+.top{display:flex;align-items:center;gap:10px;padding-block:6px 14px}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.logo{flex:none;width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
+.word{font-family:var(--f-display);font-size:21px;letter-spacing:.02em;line-height:1;white-space:nowrap}
+.bal{display:flex;align-items:center;gap:7px;padding:7px 12px 7px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+.bal svg{width:16px;height:16px;color:var(--accent-hi)}
+.gear{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.gear svg{width:19px;height:19px}
+.demo{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:9px 11px;margin-bottom:12px}
+.demo b{color:var(--text);font-weight:600}
+.demo i{flex:none;margin-top:5px;width:7px;height:7px;border-radius:50%;background:var(--accent-hi)}
+
+h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;margin:4px 0;text-wrap:balance}
+.sub{color:var(--muted);margin:0;font-size:14px}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:20px 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.label span:last-child{letter-spacing:0;text-transform:none;font-family:var(--f-mono);font-size:12px;font-weight:500}
+
+/* plate — пропорции по образцу: чёрная рамка, два белых поля, справа RUS и флаг */
+.plate-wrap{container-type:inline-size;width:100%}
+.pl{display:flex;gap:.75cqw;height:22.7cqw;padding:1.05cqw;background:var(--plate-ink);border-radius:2.6cqw;color:var(--plate-ink);font-family:var(--f-plate);font-weight:600;position:relative;overflow:hidden}
+.pl .main,.pl .reg{background:var(--plate);border-radius:1.3cqw;position:relative}
+.pl .main{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1.5cqw;overflow:hidden}
+.pl .g{display:flex;align-items:flex-end;gap:.5cqw}
+.pl .g + .g{margin-left:3cqw}
+.pl .reg{width:21%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1cqw;padding-top:.8cqw;overflow:hidden}
+.pl .regn{font-size:11.6cqw;line-height:1}
+.pl .regn.three{font-size:9.4cqw}
+.pl span.regn:not(.reel){letter-spacing:.03em}
+.pl .cc{display:flex;align-items:center;gap:1cqw}
+.pl .let{font-size:15.5cqw;line-height:1}
+.pl .dig{font-size:18cqw;line-height:1}
+.pl span.dig:not(.reel){letter-spacing:.04em}
+.pl span.let:not(.reel){letter-spacing:.03em}
+.pl .rus{font-weight:700;font-size:3.7cqw;line-height:1;letter-spacing:.02em}
+.pl .flag{display:block;width:5.8cqw;height:3.5cqw;border-radius:.35cqw;border:.22cqw solid var(--plate-ink);background:linear-gradient(#fff 0 33.3%,#1c3fcf 33.3% 66.6%,#d8251c 66.6%)}
+.reel{display:inline-block;height:1em;overflow:hidden;text-align:center}
+.reel.let{width:.68em} .reel.dig{width:.58em}
+.reel .strip{display:flex;flex-direction:column;will-change:transform,filter;transform:translate3d(0,0,0)}
+.reel .strip span{display:block;height:1em;line-height:1}
+.drum .main::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;background:linear-gradient(var(--plate) 0,rgba(246,246,241,0) 26%,rgba(246,246,241,0) 74%,var(--plate) 100%)}
+.drum.spinning .main::after{opacity:1}
+.drum.land .pl{animation:land .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes land{0%{transform:scale(1)}35%{transform:scale(1.035)}100%{transform:scale(1)}}
+.drum .pl{transition:box-shadow .4s}
+.drum.won .pl{box-shadow:0 0 0 .7cqw var(--tc),0 0 9cqw -1cqw var(--tc)}
+.drum.won.t-common .pl{box-shadow:0 0 0 .5cqw rgba(255,255,255,.08)}
+.drum.shine .pl::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-120%);animation:shine 1.1s .1s ease-out forwards;pointer-events:none}
+@keyframes shine{to{transform:translateX(120%)}}
+
+.stage{position:relative;padding:22px 0 8px}
+.tier{display:flex;justify-content:center;margin-top:16px;min-height:34px}
+.tier b{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-family:var(--f-display);font-weight:400;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent);animation:pop .35s ease-out}
+.tier b i{width:8px;height:8px;border-radius:50%;background:var(--tc)}
+.tier small{color:var(--faint);font-size:13px;align-self:center}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1)}}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:25;width:100%;height:100%}
+
+.odds{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:14px;gap:2px}
+.odds span{background:var(--tc);min-width:3px}
+.odds-legend{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--f-mono);font-size:11px;color:var(--faint)}
+.info{text-align:center;margin-top:10px;min-height:42px}
+.info b{display:block;font-size:14.5px;font-weight:600;text-wrap:balance}
+.info span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.mcard .rg{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oddslink{display:block;margin:10px auto 0;font-size:13px;color:var(--muted);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:var(--r);font-weight:700;font-size:16px}
+.btn-main{background:linear-gradient(180deg,var(--accent-hi),var(--accent));color:var(--on-accent);box-shadow:0 10px 30px -12px var(--accent)}
+.btn-main:disabled{background:var(--panel-2);color:var(--faint);box-shadow:none;cursor:not-allowed}
+.btn-main small,.btn-ghost small{font-family:var(--f-mono);font-weight:500;font-size:12px;opacity:.75}
+.btn-ghost{background:var(--panel-2);border:1px solid var(--line);font-weight:600;font-size:14px;padding:13px}
+.btn-ghost:disabled{opacity:.45;cursor:not-allowed}
+.spin-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:18px}
+.spin-row .btn-ghost{width:auto;padding-inline:18px;font-size:15px;font-weight:700}
+
+/* recent + collection */
+.recent{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mcard{display:grid;gap:6px;padding:8px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:left;position:relative}
+.mcard::before{content:"";position:absolute;left:8px;right:8px;top:0;height:2px;border-radius:0 0 2px 2px;background:var(--tc)}
+.mcard .pl{box-shadow:none}
+.mcard .meta{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--muted)}
+.mcard .meta b{color:var(--tc);font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;padding-block:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--tc)}
+.chip em{font-style:normal;font-family:var(--f-mono);font-size:11.5px;opacity:.8}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.coll{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.empty{text-align:center;color:var(--muted);padding:34px 14px;border:1px dashed var(--line);border-radius:var(--r)}
+.empty b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+
+/* shop */
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin-top:14px}
+.seg button{padding:9px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.plans{display:grid;gap:10px;margin-top:14px}
+.plan{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;text-align:left;padding:16px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);position:relative}
+.plan.best{border-color:var(--accent)}
+.plan .nm{font-family:var(--f-display);font-size:16px}
+.plan .qty{color:var(--muted);font-size:13.5px}
+.plan .price{grid-row:1 / span 2;grid-column:2;text-align:right}
+.plan .price b{display:block;font-family:var(--f-mono);font-size:19px;font-variant-numeric:tabular-nums}
+.plan .price span{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.tag{position:absolute;top:-9px;left:14px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;background:var(--accent);color:var(--on-accent);padding:2px 8px;border-radius:6px}
+
+/* profile */
+.who{display:flex;gap:14px;align-items:center;padding-block:4px 6px}
+.who .ava{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent-hi),var(--accent));color:var(--on-accent);font-family:var(--f-display);font-size:22px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-top:12px}
+.stats div{padding:14px 6px;text-align:center;min-width:0}
+.stats div+div{border-left:1px solid var(--line)}
+.stats b{display:block;font-family:var(--f-mono);font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats span{font-size:12px;color:var(--muted)}
+.card{padding:16px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);display:grid;gap:12px}
+.card h3{margin:0;font-size:15px}
+.card p{margin:0;color:var(--muted);font-size:13.5px}
+.bars{display:grid;gap:9px}
+.bars .r{display:grid;grid-template-columns:110px 1fr 36px;gap:10px;align-items:center;font-size:13px}
+.bars .r span:first-child{display:flex;align-items:center;gap:7px}
+.bars .r i{width:7px;height:7px;border-radius:50%;background:var(--tc)}
+.bars .track{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+.bars .track div{height:100%;background:var(--tc);border-radius:3px}
+.bars .r b{font-family:var(--f-mono);font-weight:500;text-align:right;font-size:12.5px}
+.link{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.link code{flex:1;min-width:0;font-family:var(--f-mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent-hi)}
+.link button{font-size:12.5px;font-weight:700}
+.daily{display:flex;align-items:center;gap:12px}
+.daily div{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.pill.on{color:var(--c-uncommon);border-color:color-mix(in srgb,var(--c-uncommon) 45%,transparent)}
+
+/* settings */
+.set{display:grid;gap:2px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:0}
+.set-row div{min-width:0}
+.set-row b{display:block;font-size:14.5px;font-weight:600}
+.set-row span{font-size:12.5px;color:var(--muted)}
+.sw{flex:none;width:46px;height:28px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.sw[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(18px);background:#fff}
+.mini-seg{flex:none;display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.mini-seg button{padding:6px 9px;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.mini-seg button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+.reg-in{flex:none;width:76px;padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-family:var(--f-mono);font-size:15px;text-align:center}
+.danger{color:#ff6b5e}
+
+/* table for odds */
+.otab{display:grid;gap:8px}
+.orow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+.orow b{display:flex;align-items:center;gap:7px;color:var(--tc);font-size:14px}
+.orow b i{width:8px;height:8px;border-radius:50%;background:var(--tc)}
+.orow .pc{font-family:var(--f-mono);font-size:13px;text-align:right}
+.orow p{grid-column:1 / -1;margin:0;font-size:12.5px;color:var(--muted)}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(12,15,19,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 9px;font-size:11px;font-weight:600;color:var(--faint)}
+.tabs button svg{width:22px;height:22px}
+.tabs button[aria-current="page"]{color:var(--accent-hi)}
+
+/* sheet + toast */
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;animation:up .22s ease-out}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 4px}
+.sheet h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:18px}
+.sheet p{margin:0;color:var(--muted);font-size:13.5px}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--text);color:var(--bg);font-weight:600;font-size:14px;padding:10px 16px;border-radius:12px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:370px){.recent{grid-template-columns:repeat(2,minmax(0,1fr))}.bars .r{grid-template-columns:96px 1fr 32px}}
+</style>
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px)}</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <img class="logo" src="data:image/jpeg;base64,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" alt="Ruletka" width="40" height="40">
+      <div class="word">Ruletka</div>
+    </div>
+    <button class="bal" id="balBtn" aria-label="Крутки, пополнить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg><span id="balVal">0</span></button>
+    <button class="gear" data-settings aria-label="Настройки игры"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h3M11 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+  </header>
+  <div id="demo" class="demo" hidden><i></i><span><b>Демо-режим.</b> Игра открыта вне Telegram: прогресс хранится только в этом браузере, покупки начисляются без оплаты.</span></div>
+  <main id="view"></main>
+</div>
+
+<div class="tabs"><nav id="tabs">
+  <button data-tab="drum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M8 7v10M16 7v10"/></svg>Барабан</button>
+  <button data-tab="coll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="4" width="7" height="7" rx="1.5"/><rect x="3.5" y="14" width="7" height="7" rx="1.5"/><rect x="13.5" y="14" width="7" height="7" rx="1.5"/></svg>Коллекция</button>
+  <button data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z"/></svg>Магазин</button>
+  <button data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.1-5.3 7.5-5.3s6.1 1.7 7.5 5.3"/></svg>Профиль</button>
+</nav></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="layer"></div>
+
+<script>
+(() => {
+  /* ======== настройки проекта ======== */
+  const BOT_USERNAME = 'Ruletka_nomerov_bot';      // username бота без @, для реферальной ссылки
+  const API_BASE = '';                   // адрес вашего сервера для счетов Stars, если есть
+  const START_SPINS = 10, DAILY_SPINS = 3, REF_SPINS = 5;
+
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const IN_TG = !!(tg && tg.initData);
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const plural = (n, a, b, c) => { n = Math.abs(n) % 100; const d = n % 10; return n > 10 && n < 20 ? c : d > 1 && d < 5 ? b : d === 1 ? a : c; };
+  const spinsWord = n => plural(n, 'крутка', 'крутки', 'круток');
+  const rand = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+  const pick = arr => arr[rand(arr.length)];
+  const today = () => new Date().toLocaleDateString('sv');
+
+  /* ======== правила номеров ======== */
+  const LET = 'АВЕКМНОРСТУХ';            // буквы, допустимые на российских номерах
+  const SPECIAL = ['АМР', 'ЕКХ', 'ВОР', 'КММ', 'ООО'];
+  const REGION_NAMES = {
+    '01':'Республика Адыгея','02':'Республика Башкортостан','03':'Республика Бурятия','04':'Республика Алтай','05':'Республика Дагестан',
+    '06':'Республика Ингушетия','07':'Кабардино-Балкарская Республика','08':'Республика Калмыкия','09':'Карачаево-Черкесская Республика',
+    '10':'Республика Карелия','11':'Республика Коми','12':'Республика Марий Эл','13':'Республика Мордовия','14':'Республика Саха (Якутия)',
+    '15':'Северная Осетия — Алания','16':'Республика Татарстан','17':'Республика Тыва','18':'Удмуртская Республика','19':'Республика Хакасия',
+    '20':'Чеченская Республика','21':'Чувашская Республика','22':'Алтайский край','23':'Краснодарский край','24':'Красноярский край',
+    '25':'Приморский край','26':'Ставропольский край','27':'Хабаровский край','28':'Амурская область','29':'Архангельская область',
+    '30':'Астраханская область','31':'Белгородская область','32':'Брянская область','33':'Владимирская область','34':'Волгоградская область',
+    '35':'Вологодская область','36':'Воронежская область','37':'Ивановская область','38':'Иркутская область','39':'Калининградская область',
+    '40':'Калужская область','41':'Камчатский край','42':'Кемеровская область','43':'Кировская область','44':'Костромская область',
+    '45':'Курганская область','46':'Курская область','47':'Ленинградская область','48':'Липецкая область','49':'Магаданская область',
+    '50':'Московская область','51':'Мурманская область','52':'Нижегородская область','53':'Новгородская область','54':'Новосибирская область',
+    '55':'Омская область','56':'Оренбургская область','57':'Орловская область','58':'Пензенская область','59':'Пермский край',
+    '60':'Псковская область','61':'Ростовская область','62':'Рязанская область','63':'Самарская область','64':'Саратовская область',
+    '65':'Сахалинская область','66':'Свердловская область','67':'Смоленская область','68':'Тамбовская область','69':'Тверская область',
+    '70':'Томская область','71':'Тульская область','72':'Тюменская область','73':'Ульяновская область','74':'Челябинская область',
+    '75':'Забайкальский край','76':'Ярославская область','77':'Москва','78':'Санкт-Петербург','79':'Еврейская автономная область',
+    '83':'Ненецкий автономный округ','86':'Ханты-Мансийский АО — Югра','87':'Чукотский автономный округ','89':'Ямало-Ненецкий АО',
+    '90':'Московская область','93':'Краснодарский край','95':'Чеченская Республика','96':'Свердловская область','97':'Москва',
+    '98':'Санкт-Петербург','99':'Москва',
+    '102':'Республика Башкортостан','116':'Республика Татарстан','121':'Чувашская Республика','123':'Краснодарский край','124':'Красноярский край',
+    '125':'Приморский край','126':'Ставропольский край','134':'Волгоградская область','136':'Воронежская область','138':'Иркутская область',
+    '142':'Кемеровская область','147':'Ленинградская область','150':'Московская область','152':'Нижегородская область','154':'Новосибирская область',
+    '159':'Пермский край','161':'Ростовская область','163':'Самарская область','164':'Саратовская область','173':'Ульяновская область',
+    '174':'Челябинская область','177':'Москва','178':'Санкт-Петербург','186':'Ханты-Мансийский АО — Югра','190':'Московская область',
+    '193':'Краснодарский край','196':'Свердловская область','197':'Москва','198':'Санкт-Петербург','199':'Москва',
+    '702':'Республика Башкортостан','716':'Республика Татарстан','750':'Московская область','761':'Ростовская область','763':'Самарская область',
+    '774':'Челябинская область','777':'Москва','790':'Московская область','797':'Москва','799':'Москва','977':'Москва'
+  };
+  const REGIONS = Object.keys(REGION_NAMES);
+  const PREMIUM_REG = ['77', '97', '99', '177', '197', '199', '777', '797', '799', '977'];
+  const TIERS = [
+    { id: 'common',   name: 'Обычный',      pct: 62,  short: 'Обычн.', about: 'Любая комбинация без закономерностей', ex: 'К482МН' },
+    { id: 'uncommon', name: 'Необычный',    pct: 25,  short: 'Необычн.', about: 'Зеркальные цифры, как 303, или пара одинаковых букв', ex: 'Р575ТТ' },
+    { id: 'rare',     name: 'Редкий',       pct: 9.5, short: 'Редкий', about: 'Три одинаковые цифры, круглые сотни или цифры подряд', ex: 'Т555КН' },
+    { id: 'blat',     name: 'Блатной',      pct: 3,   short: 'Блатной', about: 'Три одинаковые буквы, серии АМР, ЕКХ, ВОР или цифры 001–009', ex: 'А005МР' },
+    { id: 'excl',     name: 'Эксклюзивный', pct: 0.5, short: 'Эксклюз.', about: 'Одинаковые буквы вместе с 001–009 или тремя одинаковыми цифрами', ex: 'М777ММ' }
+  ];
+  const TI = Object.fromEntries(TIERS.map((t, i) => [t.id, { ...t, rank: i }]));
+
+  function classify(p) {
+    const [a, b, c] = p.l, d = p.d, n = +d;
+    const sameL = a === b && b === c, low = n >= 1 && n <= 9, triple = d[0] === d[1] && d[1] === d[2];
+    if (sameL && (low || triple)) return 'excl';
+    if (sameL || SPECIAL.includes(a + b + c) || low) return 'blat';
+    if (triple || '0123456789'.includes(d) || '9876543210'.includes(d) || n % 100 === 0) return 'rare';
+    if (d[0] === d[2] || b === c || a === b) return 'uncommon';
+    return 'common';
+  }
+  const NUM3 = { 1:'единицы', 2:'двойки', 3:'тройки', 4:'четвёрки', 5:'пятёрки', 6:'шестёрки', 7:'семёрки', 8:'восьмёрки', 9:'девятки' };
+  const CAPITAL = ['77','97','99','177','197','199','777','797','799','977'];
+  function describe(p) {
+    const [a, b, c] = p.l, d = p.d, n = +d, f = [];
+    const sameL = a === b && b === c, triple = d[0] === d[1] && d[1] === d[2];
+    if (sameL) f.push('одинаковые буквы');
+    else if (SPECIAL.includes(a + b + c)) f.push(`серия ${a}${b}${c}`);
+    else if (b === c || a === b) f.push('пара одинаковых букв');
+    if (n >= 1 && n <= 9) f.push('номер из первой десятки');
+    else if (triple) f.push(`три ${NUM3[d[0]]}`);
+    else if ('0123456789'.includes(d)) f.push('цифры по порядку');
+    else if ('9876543210'.includes(d)) f.push('цифры в обратном порядке');
+    else if (n % 100 === 0) f.push('круглые сотни');
+    else if (d[0] === d[2]) f.push('зеркальные цифры');
+    if (p.r && p.r.slice(-3) === d) f.push('регион совпадает с цифрами');
+    else if (p.r && CAPITAL.includes(p.r)) f.push('столичный регион');
+    if (!f.length) return 'Обычная комбинация без совпадений';
+    const t = f.join(', ');
+    return t[0].toUpperCase() + t.slice(1);
+  }
+  const regionName = r => REGION_NAMES[r] || 'Регион не определён';
+  const rL = () => pick(LET), rDigits = () => String(1 + rand(999)).padStart(3, '0');
+  function candidate(tier) {
+    const x = rL();
+    switch (tier) {
+      case 'uncommon': {
+        if (rand(2)) { const a = rand(10); let b; do b = rand(10); while (b === a); return { l: [rL(), rL(), rL()], d: `${a}${b}${a}` }; }
+        return { l: [rL(), x, x], d: rDigits() };
+      }
+      case 'rare': {
+        const k = 1 + rand(9), s = rand(8), m = rand(3);
+        const d = m === 0 ? `${k}${k}${k}` : m === 1 ? (rand(2) ? '0123456789' : '9876543210').slice(s, s + 3) : `${k}00`;
+        return { l: [rL(), rL(), rL()], d };
+      }
+      case 'blat': {
+        const m = rand(3);
+        if (m === 0) return { l: [x, x, x], d: rDigits() };
+        if (m === 1) return { l: [...pick(SPECIAL)], d: rDigits() };
+        return { l: [rL(), rL(), rL()], d: '00' + (1 + rand(9)) };
+      }
+      case 'excl': { const k = 1 + rand(9); return { l: [x, x, x], d: rand(2) ? '00' + k : `${k}${k}${k}` }; }
+      default: return { l: [rL(), rL(), rL()], d: rDigits() };
+    }
+  }
+  function boostOn() { return S.boostUntil > Date.now(); }
+  function currentOdds() {
+    const m = boostOn() ? 2 : 1;
+    const o = TIERS.map(t => t.id === 'common' ? 0 : t.pct * m);
+    o[0] = 100 - o.reduce((a, b) => a + b, 0);
+    return o;
+  }
+  function rollTier() {
+    const o = currentOdds(); let r = rand(1e6) / 1e4;
+    for (let i = TIERS.length - 1; i > 0; i--) { if (r < o[i]) return TIERS[i].id; r -= o[i]; }
+    return 'common';
+  }
+  function makePlate(tier = rollTier()) {
+    let p; for (let i = 0; i < 400; i++) { p = candidate(tier); if (classify(p) === tier) break; }
+    const t = classify(p);
+    const r = S.settings.region || ((t === 'excl' || t === 'blat' || (t === 'rare' && rand(2))) ? pick(PREMIUM_REG) : pick(REGIONS));
+    return { l: p.l, d: p.d, r, t, at: Date.now() };
+  }
+  const plateText = p => `${p.l[0]}${p.d}${p.l[1]}${p.l[2]} ${p.r}`;
+
+  /* ======== состояние ======== */
+  const KEY = 'plate-drum-v1';
+  const defaults = () => ({ balance: START_SPINS, total: 0, coll: [], lastDaily: '', boostUntil: 0, invited: 0,
+    settings: { sound: true, haptic: true, speed: 'smooth', showOdds: true, region: '' } });
+  let S = defaults();
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) S = { ...S, ...s, settings: { ...S.settings, ...(s.settings || {}) } }; } catch (e) {}
+  // перенос прогресса из старой версии «Барабан номеров» (ключ baraban-nomerov.v1), один раз
+  let migrated = 0;
+  try {
+    if (!localStorage.getItem(KEY)) {
+      const o = JSON.parse(localStorage.getItem('baraban-nomerov.v1') || 'null');
+      if (o && Array.isArray(o.history)) {
+        const src = o.history.slice();
+        if (o.best && !src.some(h => h.ts === o.best.ts)) src.push(o.best);
+        S.coll = src.filter(h => h && h.l && h.d).map(h => {
+          const p = { l: [...String(h.l)].slice(0, 3), d: String(h.d).padStart(3, '0'), r: String(h.r || ''), at: h.ts || Date.now() };
+          p.t = classify(p); return p;
+        }).sort((a, b) => b.at - a.at);
+        S.total = Math.max(o.spins || 0, S.coll.length);
+        if (o.settings) { S.settings.sound = o.settings.sound !== false; S.settings.haptic = o.settings.vibe !== false; if (o.settings.fast) S.settings.speed = 'fast'; }
+        migrated = S.coll.length;
+      }
+    }
+  } catch (e) {}
+  S.coll.forEach(p => { if (!p.r || !REGION_NAMES[p.r]) p.r = pick(REGIONS); });
+  if (S.settings.region && !REGION_NAMES[S.settings.region]) S.settings.region = '';
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  if (migrated) save();
+  const UI = { tab: 'drum', filter: 'all', shopKind: 'spins', spinning: false, current: null, revealed: false, resetAsk: false };
+  UI.current = S.coll[0] || makePlate('common');
+
+  /* ======== звук и вибрация ======== */
+  let ac = null;
+  function beep(freq, dur = .03, vol = .05, type = 'square') {
+    if (!S.settings.sound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+      o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
+    } catch (e) {}
+  }
+  function chime(tier) {
+    const seq = { common: [523], uncommon: [523, 659], rare: [523, 659, 784], blat: [523, 659, 784, 1046], excl: [523, 659, 784, 1046, 1318] }[tier];
+    seq.forEach((f, i) => setTimeout(() => beep(f, .22, .07, 'triangle'), i * 90));
+  }
+  const vib = kind => { if (!S.settings.haptic) return; try { const h = tg && tg.HapticFeedback; if (!h) return;
+    if (kind === 'tick') h.selectionChanged(); else if (kind === 'win') h.notificationOccurred('success'); else h.impactOccurred(kind || 'light'); } catch (e) {} };
+
+  /* ======== отрисовка номеров ======== */
+  // на номерах только буквы, совпадающие с латиницей, поэтому рисуем их латинскими глифами шрифта номера
+  const GLYPH = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'Y','Х':'X' };
+  const gl = s => [...s].map(c => GLYPH[c] || c).join('');
+  function plateHTML(p, reels = false) {
+    const cell = (cls, v, i) => reels ? `<span class="reel ${cls}" data-i="${i}"><span class="strip"><span>${gl(v)}</span></span></span>` : `<span class="${cls}">${gl(v)}</span>`;
+    const digits = reels ? [...p.d].map((c, i) => cell('dig', c, i + 1)).join('') : cell('dig', p.d);
+    const tail = reels ? cell('let', p.l[1], 4) + cell('let', p.l[2], 5) : cell('let', p.l[1] + p.l[2]);
+    return `<div class="pl"><div class="main"><span class="g">${cell('let', p.l[0], 0)}</span><span class="g">${digits}</span><span class="g">${tail}</span></div>
+      <div class="reg">${reels ? `<span class="reel regn${p.r.length > 2 ? ' three' : ''}" data-i="6" style="width:${p.r.length * .58}em"><span class="strip"><span>${esc(p.r)}</span></span></span>` : `<span class="regn${p.r.length > 2 ? ' three' : ''}">${esc(p.r)}</span>`}<span class="cc"><span class="rus">RUS</span><i class="flag"></i></span></div></div>`;
+  }
+  const mini = (p, i) => `<button class="mcard t-${p.t}" data-plate="${i}"><div class="plate-wrap">${plateHTML(p)}</div><div class="meta"><b>${TI[p.t].short}</b><span>${new Date(p.at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span></div><div class="rg">${esc(regionName(p.r))}</div></button>`;
+
+  function paintBalance() { $('#balVal').textContent = S.balance; }
+
+  function render() {
+    document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === UI.tab ? 'page' : 'false'));
+    paintBalance();
+    const v = $('#view');
+    v.innerHTML = UI.tab === 'drum' ? drumView() : UI.tab === 'coll' ? collView() : UI.tab === 'shop' ? shopView() : profileView();
+  }
+
+  function drumView() {
+    const p = UI.current, o = currentOdds();
+    const recent = S.coll.slice(0, 6);
+    return `
+      <h1>Крути барабан, собирай номера</h1>
+      <p class="sub">Одна крутка даёт один номер. Чем красивее комбинация, тем реже она выпадает.</p>
+      <div class="stage">
+        <div class="plate-wrap drum ${UI.revealed ? 'won t-' + p.t : ''}" id="drum">${plateHTML(p, true)}</div>
+        <div class="tier" id="tierLbl">${UI.revealed ? tierBadge(p.t) : '<small>Нажмите «Крутить»</small>'}</div>
+        <div class="info" id="plateInfo">${UI.revealed ? infoHTML(p) : ''}</div>
+        ${S.settings.showOdds ? `<div class="odds">${TIERS.map((t, i) => `<span class="t-${t.id}" style="flex:${Math.max(o[i], 1.2)}"></span>`).join('')}</div>
+          <div class="odds-legend"><span>обычный ${o[0].toFixed(0)}%</span><span>${boostOn() ? 'удача ×2 · ' : ''}эксклюзив ${o[4].toFixed(1)}%</span></div>` : ''}
+        <button class="oddslink" data-odds>Какие номера сколько стоят по редкости</button>
+      </div>
+      <div class="spin-row">
+        <button class="btn btn-main" id="spin1" ${UI.spinning ? 'disabled' : ''}>${UI.spinning ? 'Крутится…' : 'Крутить'} <small>−1</small></button>
+        <button class="btn btn-ghost" id="spin10" ${UI.spinning || S.balance < 10 ? 'disabled' : ''}>×10 <small>−10</small></button>
+      </div>
+      <div class="label"><span>Последние</span><span>${S.coll.length ? `всего ${S.coll.length}` : ''}</span></div>
+      ${recent.length ? `<div class="recent">${recent.map((x, i) => mini(x, i)).join('')}</div>` : '<div class="empty"><b>Здесь появятся ваши номера</b>Каждый выигранный номер сохраняется в коллекции.</div>'}`;
+  }
+  const infoHTML = p => `<b>${esc(describe(p))}</b><span>${esc(p.r)} · ${esc(regionName(p.r))}</span>`;
+  const tierBadge = t => `<b class="t-${t}"><i></i>${TI[t].name}</b>`;
+
+  function collView() {
+    const counts = Object.fromEntries(TIERS.map(t => [t.id, 0])); S.coll.forEach(p => counts[p.t]++);
+    const list = S.coll.map((p, i) => [p, i]).filter(([p]) => UI.filter === 'all' || p.t === UI.filter)
+      .sort((a, b) => TI[b[0].t].rank - TI[a[0].t].rank || b[0].at - a[0].at).slice(0, 240);
+    return `<h1>Коллекция</h1><p class="sub">Все номера, которые вы выкрутили, от самых редких.</p>
+      <div class="label"><span>Редкость</span><span>${S.coll.length} ${plural(S.coll.length,'номер','номера','номеров')}</span></div>
+      <div class="chips" role="group" aria-label="Фильтр по редкости">
+        <button class="chip" data-filter="all" aria-pressed="${UI.filter === 'all'}">Все <em>${S.coll.length}</em></button>
+        ${[...TIERS].reverse().map(t => `<button class="chip t-${t.id}" data-filter="${t.id}" aria-pressed="${UI.filter === t.id}"><i></i>${t.name} <em>${counts[t.id]}</em></button>`).join('')}
+      </div>
+      ${list.length ? `<div class="coll">${list.map(([p, i]) => mini(p, i)).join('')}</div>` : `<div class="empty" style="margin-top:14px"><b>${S.coll.length ? 'Таких номеров пока нет' : 'Коллекция пуста'}</b>${S.coll.length ? 'Крутите барабан, редкие номера ещё впереди.' : 'Откройте «Барабан» и сделайте первую крутку.'}</div>`}`;
+  }
+
+  const PACKS = [ { id: 's10', n: 10, stars: 25 }, { id: 's50', n: 50, stars: 100 }, { id: 's120', n: 120, stars: 200 }, { id: 's300', n: 300, stars: 450 } ];
+  const BOOSTS = [ { id: 'b1', name: 'Удача ×2', days: 1, stars: 49 }, { id: 'b7', name: 'Удача ×2', days: 7, stars: 199 } ];
+  function shopView() {
+    let body;
+    if (UI.shopKind === 'spins') {
+      const per = PACKS.map(p => p.stars / p.n), best = per.indexOf(Math.min(...per));
+      body = PACKS.map((p, i) => `<button class="plan ${i === best ? 'best' : ''}" data-buy="${p.id}">${i === best ? '<span class="tag">Выгоднее всего</span>' : ''}
+        <span class="nm">${p.n} ${spinsWord(p.n)}</span>
+        <span class="price"><b>${p.stars} ⭐</b><span>${(p.stars / p.n).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ⭐ за крутку</span></span>
+        <span class="qty">Без срока действия</span></button>`).join('');
+    } else {
+      body = BOOSTS.map(b => `<button class="plan" data-buy="${b.id}">
+        <span class="nm">${b.name} · ${b.days === 1 ? '24 часа' : b.days + ' дней'}</span>
+        <span class="price"><b>${b.stars} ⭐</b><span>${b.days === 1 ? 'сутки' : (b.stars / b.days).toFixed(0) + ' ⭐ в день'}</span></span>
+        <span class="qty">Шанс Редкого и выше в два раза больше</span></button>`).join('');
+    }
+    return `<h1>Магазин</h1>
+      <p class="sub">На счету <b style="color:var(--text)">${S.balance}</b> ${spinsWord(S.balance)}${boostOn() ? `, удача ×2 до ${new Date(S.boostUntil).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}. Оплата в Telegram Stars.</p>
+      <div class="seg" role="group"><button data-kind="spins" aria-pressed="${UI.shopKind === 'spins'}">Крутки</button><button data-kind="boost" aria-pressed="${UI.shopKind === 'boost'}">Бусты</button></div>
+      <div class="plans">${body}</div>
+      ${dailyCard()}`;
+  }
+  const dailyCard = () => S.lastDaily !== today()
+    ? `<div class="label"><span>Бесплатно</span><span></span></div><div class="card daily"><div><h3>Ежедневный бонус</h3><p>Заходите каждый день и забирайте +${DAILY_SPINS} ${spinsWord(DAILY_SPINS)}.</p></div><button class="btn btn-main" style="width:auto;padding:11px 16px" data-daily>Забрать</button></div>`
+    : '';
+
+  function profileView() {
+    const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    const name = (u && u.first_name) || 'Игрок';
+    const counts = Object.fromEntries(TIERS.map(t => [t.id, 0])); S.coll.forEach(p => counts[p.t]++);
+    const max = Math.max(1, ...Object.values(counts));
+    const best = S.coll.reduce((a, p) => !a || TI[p.t].rank > TI[a.t].rank ? p : a, null);
+    const link = `https://t.me/${BOT_USERNAME}?start=ref${u ? u.id : '000000'}`;
+    return `
+      <div class="who"><span class="ava">${esc(name[0].toUpperCase())}</span><div><h1 style="margin:0">${esc(name)}</h1><p class="sub">${u && u.username ? '@' + esc(u.username) : 'Игрок Ruletka'}</p></div></div>
+      <div class="stats"><div><b>${S.balance}</b><span>${spinsWord(S.balance)}</span></div><div><b>${S.total}</b><span>прокручено</span></div><div><b class="${best ? 't-' + best.t : ''}" style="${best ? 'color:var(--tc)' : ''}">${best ? TI[best.t].short : '—'}</b><span>лучший</span></div></div>
+      ${best ? `<div class="label"><span>Лучший номер</span><span>${esc(regionName(best.r))}</span></div><div class="plate-wrap drum won t-${best.t}" style="max-width:300px">${plateHTML(best)}</div>` : ''}
+      <div class="label"><span>По редкости</span><span></span></div>
+      <div class="card bars">${[...TIERS].reverse().map(t => `<div class="r t-${t.id}"><span><i></i>${t.name}</span><div class="track"><div style="width:${counts[t.id] / max * 100}%"></div></div><b>${counts[t.id]}</b></div>`).join('')}</div>
+      ${dailyCard()}
+      <div class="label"><span>Пригласи друга</span><span>+${REF_SPINS} за каждого</span></div>
+      <div class="card"><p>Друг запускает игру по вашей ссылке, а вы получаете ${REF_SPINS} ${spinsWord(REF_SPINS)}.</p>
+        <div class="link"><code id="refLink">${esc(link)}</code><button id="copyRef">Копировать</button></div>
+        <button class="btn btn-main" id="shareRef" data-link="${esc(link)}">Позвать друга</button></div>
+      <div class="label"><span>Игра</span><span></span></div>
+      <button class="btn btn-ghost" data-settings>Настройки игры</button>`;
+  }
+
+  /* ======== анимация барабана ======== */
+  const SPEED = { smooth: { base: 2100, step: 330 }, fast: { base: 850, step: 120 }, instant: { base: 0, step: 0 } };
+  const SETTLE = 300, OVERSHOOT = 0.26;   // доводка: барабан проскакивает символ на четверть и мягко возвращается
+  function runReels(specs) {
+    return new Promise(resolve => {
+      specs.forEach(s => {
+        const cur = s.el.textContent.trim() || gl(pick(s.pool));
+        if (s.dur <= 0) { s.el.innerHTML = `<span class="strip"><span>${gl(s.val)}</span></span>`; s.done = true; return; }
+        const K = Math.max(14, Math.round(s.dur / 42));
+        const items = [cur]; for (let i = 0; i < K; i++) items.push(gl(pick(s.pool)));
+        items.push(gl(s.val), gl(pick(s.pool)));
+        s.target = items.length - 2;
+        s.el.innerHTML = `<span class="strip">${items.map(c => `<span>${esc(c)}</span>`).join('')}</span>`;
+        s.strip = s.el.firstChild; s.last = 0; s.landed = false; s.done = false;
+      });
+      if (specs.every(s => s.done)) return resolve();
+      const t0 = performance.now(); let lastTick = 0;
+      function frame(now) {
+        let running = false;
+        for (const s of specs) {
+          if (s.done) continue;
+          const t = now - t0; let pos, v = 0;
+          if (t < s.dur) {
+            const x = t / s.dur, k = 1 - x, dist = s.target + OVERSHOOT;
+            pos = dist * (1 - k * k * k * k);            // easeOutQuart: быстрый разгон, долгое мягкое торможение
+            v = dist * 4 * k * k * k / s.dur;             // скорость, символов в мс
+          } else if (t < s.dur + SETTLE) {
+            if (!s.landed) { s.landed = true; beep(760, .05, .06, 'triangle'); vib('tick'); }
+            const y = (t - s.dur) / SETTLE;
+            pos = s.target + OVERSHOOT * (0.5 + 0.5 * Math.cos(Math.PI * y));
+          } else {
+            s.el.innerHTML = `<span class="strip"><span>${esc(s.strip.children[s.target].textContent)}</span></span>`;
+            s.done = true; continue;
+          }
+          running = true;
+          s.strip.style.transform = `translate3d(0,${-pos}em,0)`;
+          const blur = Math.min(2.4, v * 55);
+          s.strip.style.filter = blur > .12 ? `blur(${blur.toFixed(2)}px)` : 'none';
+          const idx = Math.floor(pos);
+          if (idx !== s.last) { s.last = idx; if (now - lastTick > 42 && v > .002) { lastTick = now; beep(1200 + rand(300), .012, .025); } }
+        }
+        running ? requestAnimationFrame(frame) : resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+  async function animate(p) {
+    const drum = $('#drum'); if (!drum) return;
+    drum.className = 'plate-wrap drum spinning';
+    $('#tierLbl').innerHTML = '<small>Крутится…</small>';
+    $('#plateInfo').innerHTML = '';
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sp = SPEED[reduce ? 'instant' : S.settings.speed] || SPEED.smooth;
+    const regEl = drum.querySelector('[data-i="6"]');
+    regEl.className = 'reel regn' + (p.r.length > 2 ? ' three' : '');
+    regEl.style.width = p.r.length * .58 + 'em';
+    const vals = [p.l[0], p.d[0], p.d[1], p.d[2], p.l[1], p.l[2], p.r];
+    const pools = [LET, '0123456789', '0123456789', '0123456789', LET, LET, REGIONS.filter(x => x.length === p.r.length)];
+    await runReels(vals.map((val, i) => ({ el: drum.querySelector(`[data-i="${i}"]`), pool: pools[i], val, dur: sp.base ? sp.base + i * sp.step : 0 })));
+    drum.classList.remove('spinning');
+  }
+  function reveal(p) {
+    const drum = $('#drum'); if (!drum) return;
+    UI.revealed = true;
+    drum.className = `plate-wrap drum won land t-${p.t}` + (TI[p.t].rank >= 2 ? ' shine' : '');
+    $('#tierLbl').innerHTML = tierBadge(p.t);
+    $('#plateInfo').innerHTML = infoHTML(p);
+    chime(p.t);
+    if (TI[p.t].rank >= 2) { vib('win'); confetti(p.t); } else vib('light');
+  }
+
+  async function spin(n) {
+    if (UI.spinning) return;
+    if (S.balance < n) {
+      vib('rigid');
+      return sheet(`<h3>Крутки закончились</h3><p>Заберите ежедневный бонус, позовите друга или купите крутки в магазине.</p>
+        <button class="btn btn-main" data-go="shop">В магазин</button><button class="btn btn-ghost" data-close>Закрыть</button>`);
+    }
+    UI.spinning = true; UI.revealed = false;
+    S.balance -= n; S.total += n;
+    const res = Array.from({ length: n }, () => makePlate());
+    const best = res.reduce((a, b) => TI[b.t].rank > TI[a.t].rank ? b : a);
+    S.coll.unshift(...[...res].reverse()); if (S.coll.length > 1000) S.coll.length = 1000;
+    save(); paintBalance(); vib('medium');
+    ['#spin1', '#spin10'].forEach(s => { const b = $(s); if (b) b.disabled = true; });
+    $('#spin1').firstChild.textContent = 'Крутится… ';
+    UI.current = best;
+    await animate(best);
+    reveal(best);
+    await new Promise(r => setTimeout(r, 650));
+    UI.spinning = false;
+    render();
+    if (n > 1) {
+      const sorted = [...res].sort((a, b) => TI[b.t].rank - TI[a.t].rank);
+      sheet(`<h3>${n} ${plural(n,'номер','номера','номеров')}</h3><p>Лучший: <b class="t-${best.t}" style="color:var(--tc)">${TI[best.t].name}</b>. Все номера уже в коллекции.</p>
+        <div class="coll" style="margin-top:0">${sorted.map(p => `<div class="mcard t-${p.t}"><div class="plate-wrap">${plateHTML(p)}</div><div class="meta"><b>${TI[p.t].short}</b><span></span></div><div class="rg">${esc(describe(p))}</div></div>`).join('')}</div>
+        <button class="btn btn-ghost" data-close>Готово</button>`);
+    }
+  }
+
+  /* конфетти */
+  function confetti(tier) {
+    const cv = $('#fx'), ctx = cv.getContext('2d'); if (!ctx) return;
+    const dpr = devicePixelRatio || 1; cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+    const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + tier).trim();
+    const drum = $('#drum').getBoundingClientRect();
+    const N = { rare: 60, blat: 110, excl: 180 }[tier] || 40;
+    const parts = Array.from({ length: N }, () => ({ x: drum.left + drum.width / 2, y: drum.top + drum.height / 2, vx: (Math.random() - .5) * 11, vy: -Math.random() * 11 - 3, s: 3 + Math.random() * 5, a: Math.random() * 6, c: Math.random() < .6 ? col : '#ffffff' }));
+    let t = 0;
+    (function step() {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      parts.forEach(p => { p.vy += .32; p.x += p.vx; p.y += p.vy; p.a += .2; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = Math.max(0, 1 - t / 90); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+      if (++t < 90) requestAnimationFrame(step); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+    })();
+  }
+
+  /* ======== окна ======== */
+  function sheet(html) {
+    $('#layer').innerHTML = `<div class="scrim" data-scrim><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div></div>`;
+    if (tg && tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(closeSheet); }
+  }
+  function closeSheet() { UI.resetAsk = false; $('#layer').innerHTML = ''; if (tg && tg.BackButton) { tg.BackButton.hide(); tg.BackButton.offClick(closeSheet); } }
+  let toastT;
+  function toast(t) {
+    let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = t; clearTimeout(toastT); toastT = setTimeout(() => el.remove(), 2600);
+  }
+
+  function oddsSheet() {
+    const o = currentOdds();
+    sheet(`<h3>Шансы выпадения</h3><p>${boostOn() ? 'Сейчас действует «Удача ×2»: шансы Редкого и выше удвоены.' : 'Регион на редкость не влияет. Каждая крутка независима.'}</p>
+      <div class="otab">${[...TIERS].reverse().map(t => { const pc = o[TI[t.id].rank]; return `<div class="orow t-${t.id}"><b><i></i>${t.name}</b><span class="pc">${pc.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}% · 1 из ${Math.round(100 / pc)}</span><p>${t.about}. Например, ${t.ex}.</p></div>`; }).join('')}</div>
+      <button class="btn btn-ghost" data-close>Понятно</button>`);
+  }
+
+  function plateSheet(i) {
+    const p = S.coll[i]; if (!p) return;
+    const pc = TIERS[TI[p.t].rank].pct;
+    sheet(`<div class="plate-wrap drum won t-${p.t}">${plateHTML(p)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${tierBadge(p.t).replace('<b', '<b style="animation:none;font-size:12px"')}<span class="sub">${new Date(p.at).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
+      <div class="info" style="margin-top:0;min-height:0"><b>${esc(describe(p))}</b><span>Регион ${esc(p.r)} · ${esc(regionName(p.r))}</span></div>
+      <p>Базовый шанс такого номера ${pc.toLocaleString('ru-RU')}%, это примерно 1 из ${Math.round(100 / pc)} круток.</p>
+      <button class="btn btn-main" data-share="${i}">Похвастаться</button><button class="btn btn-ghost" data-close>Закрыть</button>`);
+  }
+
+  function settingsSheet() {
+    const st = S.settings;
+    const sw = (k, label, hint) => `<div class="set-row"><div><b>${label}</b><span>${hint}</span></div><button class="sw" role="switch" aria-checked="${!!st[k]}" data-toggle="${k}" aria-label="${label}"></button></div>`;
+    sheet(`<h3>Настройки игры</h3>
+      <div class="set">
+        ${sw('sound', 'Звук', 'Щелчки барабана и сигнал выигрыша')}
+        ${sw('haptic', 'Вибрация', 'Отклик при остановке барабана')}
+        <div class="set-row"><div><b>Скорость барабана</b><span>Как долго крутятся символы</span></div>
+          <div class="mini-seg" role="group">${[['smooth','Плавно'],['fast','Быстро'],['instant','Сразу']].map(([k, l]) => `<button data-speed="${k}" aria-pressed="${st.speed === k}">${l}</button>`).join('')}</div></div>
+        ${sw('showOdds', 'Шансы под барабаном', 'Полоска с вероятностями редкостей')}
+        <div class="set-row"><div><b>Мой регион</b><span>Все номера будут с этим кодом. Пусто, если случайный</span></div>
+          <input class="reg-in" id="regIn" inputmode="numeric" maxlength="3" placeholder="—" value="${esc(st.region)}" aria-label="Код региона"></div>
+        <div class="set-row"><div><b>Сбросить прогресс</b><span>Удалит коллекцию и вернёт ${START_SPINS} круток</span></div>
+          ${UI.resetAsk ? '<div class="mini-seg"><button class="danger" data-reset="yes">Удалить</button><button data-reset="no">Отмена</button></div>' : '<button class="btn btn-ghost danger" style="width:auto;padding:8px 12px" data-reset="ask">Сбросить</button>'}</div>
+      </div>
+      <button class="btn btn-ghost" data-close>Готово</button>`);
+    const inp = $('#regIn');
+    inp.addEventListener('change', () => {
+      const v = inp.value.trim();
+      if (!v) { S.settings.region = ''; save(); return toast('Регион снова случайный'); }
+      const norm = v.length === 1 ? '0' + v : v;
+      if (!REGIONS.includes(norm)) { inp.value = S.settings.region; return toast('Такого кода региона нет, проверьте цифры'); }
+      inp.value = norm; S.settings.region = norm; save(); toast(`Теперь все номера с регионом ${norm}`);
+    });
+  }
+
+  /* ======== покупки ======== */
+  function grant(item) {
+    if (item.n) S.balance += item.n;
+    else S.boostUntil = Math.max(Date.now(), S.boostUntil) + item.days * 864e5;
+    save(); paintBalance(); render();
+  }
+  async function purchase(id) {
+    const item = PACKS.find(x => x.id === id) || BOOSTS.find(x => x.id === id); if (!item) return;
+    closeSheet();
+    if (!IN_TG) { grant(item); return toast('Демо: начислено без оплаты'); }
+    try {
+      const r = await fetch(API_BASE + '/api/invoice', { method: 'POST', headers: { 'Authorization': 'tma ' + tg.initData, 'Content-Type': 'application/json' }, body: JSON.stringify({ item: id }) });
+      const d = await r.json(); if (!r.ok || !d.invoice_url) throw new Error();
+      tg.openInvoice(d.invoice_url, status => { if (status === 'paid') { grant(item); vib('win'); toast(item.n ? `+${item.n} ${spinsWord(item.n)}` : 'Удача ×2 включена'); } });
+    } catch (e) { toast('Оплата пока не подключена'); }
+  }
+  function buySheet(id) {
+    const item = PACKS.find(x => x.id === id) || BOOSTS.find(x => x.id === id); if (!item) return;
+    const title = item.n ? `${item.n} ${spinsWord(item.n)}` : `${item.name} на ${item.days === 1 ? 'сутки' : item.days + ' дней'}`;
+    sheet(`<h3>${title}</h3><p>${item.n ? 'Крутки не сгорают, тратьте когда удобно.' : 'Шанс Редкого, Блатного и Эксклюзивного номера удваивается. Если буст уже действует, время прибавится.'}</p>
+      <button class="btn btn-main" data-pay="${id}">Оплатить ${item.stars} ⭐</button><button class="btn btn-ghost" data-close>Отмена</button>`);
+  }
+
+  /* ======== события ======== */
+  document.addEventListener('click', async e => {
+    const t = e.target.closest('button,[data-scrim]'); if (!t) return;
+    const d = t.dataset;
+    if (d.scrim !== undefined) { if (e.target === t) closeSheet(); return; }
+    if (d.tab) { if (UI.spinning) return toast('Дождитесь остановки барабана'); if (UI.tab === d.tab) return; vib(); UI.tab = d.tab; scrollTo(0, 0); return render(); }
+    if (t.id === 'spin1') return spin(1);
+    if (t.id === 'spin10') return spin(10);
+    if (d.odds !== undefined) return oddsSheet();
+    if (d.plate) return plateSheet(+d.plate);
+    if (d.filter) { UI.filter = d.filter; return render(); }
+    if (d.kind) { UI.shopKind = d.kind; return render(); }
+    if (d.buy) { vib(); return buySheet(d.buy); }
+    if (d.pay) return purchase(d.pay);
+    if (d.go) { closeSheet(); UI.tab = d.go; scrollTo(0, 0); return render(); }
+    if (d.close !== undefined) return closeSheet();
+    if (d.settings !== undefined) return settingsSheet();
+    if (d.toggle) { S.settings[d.toggle] = !S.settings[d.toggle]; save(); t.setAttribute('aria-checked', S.settings[d.toggle]); vib('tick'); if (!UI.spinning) render(); return; }
+    if (d.speed) { S.settings.speed = d.speed; save(); t.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === t)); vib('tick'); return; }
+    if (d.reset) {
+      if (d.reset === 'ask') { UI.resetAsk = true; return settingsSheet(); }
+      if (d.reset === 'no') { UI.resetAsk = false; return settingsSheet(); }
+      const keep = S.settings; S = defaults(); S.settings = keep; save();
+      UI.current = makePlate('common'); UI.revealed = false; closeSheet(); render(); return toast('Прогресс сброшен');
+    }
+    if (d.daily !== undefined) {
+      if (S.lastDaily === today()) return toast('Бонус уже получен, приходите завтра');
+      S.lastDaily = today(); S.balance += DAILY_SPINS; save(); vib('win'); toast(`+${DAILY_SPINS} ${spinsWord(DAILY_SPINS)}`); return render();
+    }
+    if (d.share) {
+      const p = S.coll[+d.share]; const text = `Мне выпал номер ${plateText(p)} (${regionName(p.r)}): ${describe(p).toLowerCase()}. Редкость: ${TI[p.t].name}! Попробуй и ты`;
+      const url = `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/${BOT_USERNAME}`)}&text=${encodeURIComponent(text)}`;
+      if (IN_TG) tg.openTelegramLink(url); else toast('В Telegram откроется выбор чата');
+      return;
+    }
+    if (t.id === 'balBtn') { if (UI.spinning) return; UI.tab = 'shop'; return render(); }
+    if (t.id === 'copyRef') {
+      const link = $('#refLink').textContent;
+      try { await navigator.clipboard.writeText(link); toast('Ссылка скопирована'); }
+      catch (err) { const r = document.createRange(); r.selectNodeContents($('#refLink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Выделили ссылку, скопируйте её'); }
+      return;
+    }
+    if (t.id === 'shareRef') {
+      const url = `https://t.me/share/url?url=${encodeURIComponent(d.link)}&text=${encodeURIComponent('Крути барабан и собирай блатные номера 🚗')}`;
+      if (IN_TG) tg.openTelegramLink(url); else toast('В Telegram откроется выбор чата');
+    }
+  });
+
+  /* ======== запуск ======== */
+  if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor('#0c0f13'); tg.setBackgroundColor('#0c0f13'); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {} }
+  $('#demo').hidden = IN_TG;
+  const start = (location.hash || '').slice(1);
+  if (['drum', 'coll', 'shop', 'profile'].includes(start)) UI.tab = start;
+  render();
+  if (migrated) setTimeout(() => toast(`Коллекция перенесена из старой версии: ${migrated} ${plural(migrated,'номер','номера','номеров')}`), 400);
+})();
+</script>
+
+</body>
+</html>

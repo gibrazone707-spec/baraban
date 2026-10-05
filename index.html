@@ -458,7 +458,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
         <div class="info" id="plateInfo">${UI.revealed ? infoHTML(p) : ''}</div>
         ${S.settings.showOdds ? `<div class="odds">${TIERS.map((t, i) => `<span class="t-${t.id}" style="flex:${Math.max(o[i], 1.2)}"></span>`).join('')}</div>
           <div class="odds-legend"><span>обычный ${o[0].toFixed(0)}%</span><span>${boostOn() ? 'удача ×2 · ' : ''}эксклюзив ${o[4].toFixed(1)}%</span></div>` : ''}
-        <button class="oddslink" data-odds>Какие номера сколько стоят по редкости</button>
+        <button class="oddslink" data-odds>Шансы выпадения</button>
       </div>
       <div class="spin-row">
         <button class="btn btn-main" id="spin1" ${UI.spinning ? 'disabled' : ''}>${UI.spinning ? 'Крутится…' : 'Крутить'} <small>−1</small></button>

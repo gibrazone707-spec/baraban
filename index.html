@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Manrope:wght@400;500;600;700&family=Barlow:wght@600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
+/* русская «У» для номеров: в шрифте Barlow нет кириллицы, поэтому эта буква берётся из маленького встроенного шрифта в том же стиле */
+@font-face{font-family:"PlateCyr";font-weight:100 900;font-display:block;src:url(data:font/ttf;base64,AAEAAAAKAIAAAwAgT1MvMk2+SqEAAAEoAAAAYGNtYXAADAR2AAABkAAAADRnbHlmyW3nhgAAAcwAAAAqaGVhZC9XGRoAAACsAAAANmhoZWEGRAGvAAAA5AAAACRobXR4BEsAIAAAAYgAAAAIbG9jYQAVAAAAAAHEAAAABm1heHAABAAKAAABCAAAACBuYW1lhNOiwAAAAfgAAABjcG9zdKGiN6kAAAJcAAAALgABAAAAAQAAtj5Epl8PPPUAAQPoAAAAAOb2ar8AAAAA5vZqvwAeAAACOAK8AAAAAwACAAAAAAAAAAEAAAPo/zgAAAJXACAAHQI6AAEAAAAAAAAAAAAAAAAAAAACAAEAAAACAAgAAQAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAwImAZAABQAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAPz8/PwAABCMEIwMg/zgAAAPoAMgAAAAAAAAAAAH0ArwAAAAgAAAB9AAAAlcAIAAAAAIAAAADAAAAFAADAAEAAAAUAAQAIAAAAAQABAABAAAEI///AAAEI///+94AAQAAAAAAAAAAABUAAAABAB4AAAI4ArwABwAAMxMDMxMTMwF4gNp6mYeA/sABGAGk/tkBJ/1EAAAAAAAABAA2AAEAAAAAAAEACAAAAAEAAAAAAAIABwAIAAMAAQQJAAEAEAAPAAMAAQQJAAIADgAfUGxhdGVDeXJSZWd1bGFyAFAAbABhAHQAZQBDAHkAcgBSAGUAZwB1AGwAYQByAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAECB3VuaTA0MjMAAA==) format("truetype")}
 /* Layout: ночная трасса — асфальтовый фон, номер в центре как единственный светлый объект, цвет редкости подсвечивает только выигрыш */
 :root{
   --bg:#0c0f13; --panel:#141a21; --panel-2:#1b232c; --line:#26303b;
@@ -18,7 +20,7 @@
   --c-common:#a3acb7; --c-uncommon:#43c983; --c-rare:#4aa3ff; --c-blat:#b06cff; --c-excl:#ffb320;
   --f-display:"Russo One","Arial Black",system-ui,sans-serif;
   --f-body:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-plate:"Barlow","DIN Alternate","Arial",sans-serif;
+  --f-plate:"Barlow","PlateCyr","DIN Alternate","Arial",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --r:14px;
   color-scheme:dark;
@@ -95,9 +97,11 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 .odds{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:14px;gap:2px}
 .odds span{background:var(--tc);min-width:3px}
 .odds-legend{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--f-mono);font-size:11px;color:var(--faint)}
-.info{text-align:center;margin-top:10px;min-height:42px}
+.info{text-align:center;margin-top:10px;min-height:78px}
 .info b{display:block;font-size:14.5px;font-weight:600;text-wrap:balance}
-.info span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.info span{display:block;color:var(--muted);font-size:13px;margin-top:2px;text-wrap:balance}
+.info span.fd{font-size:12px;color:var(--faint);margin-top:1px}
+.info span.odds-note{font-family:var(--f-mono);font-size:11px;color:var(--faint);margin-top:5px}
 .mcard .rg{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .oddslink{display:block;margin:10px auto 0;font-size:13px;color:var(--muted);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 
@@ -362,13 +366,37 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     else if ('9876543210'.includes(d)) f.push('цифры в обратном порядке');
     else if (n % 100 === 0) f.push('круглые сотни');
     else if (d[0] === d[2]) f.push('зеркальные цифры');
+    else if (d[0] === d[1] || d[1] === d[2]) f.push('две одинаковые цифры подряд');
+    else if (d[0] === '0') f.push('номер начинается с нуля');
+    if (!sameL && a === c && b !== c) f.push('крайние буквы одинаковые');
     if (p.r && p.r.slice(-3) === d) f.push('регион совпадает с цифрами');
+    else if (p.r && p.r.length >= 2 && d.includes(p.r.slice(-2))) f.push('цифры повторяют код региона');
     else if (p.r && CAPITAL.includes(p.r)) f.push('столичный регион');
     if (!f.length) return 'Обычная комбинация без совпадений';
     const t = f.join(', ');
     return t[0].toUpperCase() + t.slice(1);
   }
   const regionName = r => REGION_NAMES[r] || 'Регион не определён';
+  // федеральные округа по основным кодам регионов
+  const FD = {
+    'Центральный': '31 32 33 36 37 40 44 46 48 50 57 62 67 68 69 71 76 77',
+    'Северо-Западный': '10 11 29 35 39 47 51 53 60 78 83',
+    'Южный': '01 08 23 30 34 61',
+    'Северо-Кавказский': '05 06 07 09 15 20 26',
+    'Приволжский': '02 12 13 16 18 21 43 52 56 58 59 63 64 73',
+    'Уральский': '45 66 72 74 86 89',
+    'Сибирский': '04 17 19 22 24 38 42 54 55 70',
+    'Дальневосточный': '03 14 25 27 28 41 49 65 75 79 87'
+  };
+  const NAME_FD = {};
+  Object.entries(FD).forEach(([fd, codes]) => codes.split(' ').forEach(c => { NAME_FD[REGION_NAMES[c]] = fd; }));
+  const BASE_CODE = {};
+  Object.keys(REGION_NAMES).forEach(c => { const n = REGION_NAMES[c]; if (!(n in BASE_CODE) || +c < +BASE_CODE[n]) BASE_CODE[n] = c; });
+  function regionLine(r) {
+    const n = regionName(r), fd = NAME_FD[n];
+    const extra = BASE_CODE[n] && BASE_CODE[n] !== r ? `дополнительный код, основной ${BASE_CODE[n]}` : '';
+    return { name: n, fd: fd ? `${fd} федеральный округ` : '', extra };
+  }
   const rL = () => pick(LET), rDigits = () => String(1 + rand(999)).padStart(3, '0');
   function candidate(tier) {
     const x = rL();
@@ -462,8 +490,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     if (kind === 'tick') h.selectionChanged(); else if (kind === 'win') h.notificationOccurred('success'); else h.impactOccurred(kind || 'light'); } catch (e) {} };
 
   /* ======== отрисовка номеров ======== */
-  // на номерах только буквы, совпадающие с латиницей, поэтому рисуем их латинскими глифами шрифта номера
-  const GLYPH = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'Y','Х':'X' };
+  // шрифт номера латинский: буквы, совпадающие с латиницей, рисуем его латинскими глифами, а «У» — русской из PlateCyr
+  const GLYPH = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X' };
   const gl = s => [...s].map(c => GLYPH[c] || c).join('');
   function plateHTML(p, reels = false) {
     const cell = (cls, v, i) => reels ? `<span class="reel ${cls}" data-i="${i}"><span class="strip"><span>${gl(v)}</span></span></span>` : `<span class="${cls}">${gl(v)}</span>`;
@@ -512,7 +540,12 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       <div class="label"><span>Последние</span><span>${S.coll.length ? `всего ${S.coll.length}` : ''}</span></div>
       ${recent.length ? `<div class="recent">${recent.map((x, i) => mini(x, i)).join('')}</div>` : '<div class="empty"><b>Здесь появятся ваши номера</b>Каждый выигранный номер сохраняется в коллекции.</div>'}`;
   }
-  const infoHTML = p => `<b>${esc(describe(p))}</b><span>${esc(p.r)} · ${esc(regionName(p.r))}</span>`;
+  function infoHTML(p) {
+    const rg = regionLine(p.r), pc = TIERS[TI[p.t].rank].pct;
+    const sub = [rg.fd, rg.extra].filter(Boolean).join(' · ');
+    return `<b>${esc(describe(p))}</b><span>Регион ${esc(p.r)} · ${esc(rg.name)}</span>${sub ? `<span class="fd">${esc(sub)}</span>` : ''}`
+      + `<span class="odds-note">Шанс такого номера ${pc.toLocaleString('ru-RU')}%, примерно 1 из ${Math.round(100 / pc)} круток</span>`;
+  }
   const tierBadge = t => `<b class="t-${t}"><i></i>${TI[t].name}</b>`;
 
   function collView() {
@@ -727,11 +760,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 
   function plateSheet(i) {
     const p = S.coll[i]; if (!p) return;
-    const pc = TIERS[TI[p.t].rank].pct;
     sheet(`<div class="plate-wrap drum won t-${p.t}">${plateHTML(p)}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${tierBadge(p.t).replace('<b', '<b style="animation:none;font-size:12px"')}<span class="sub">${new Date(p.at).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
-      <div class="info" style="margin-top:0;min-height:0"><b>${esc(describe(p))}</b><span>Регион ${esc(p.r)} · ${esc(regionName(p.r))}</span></div>
-      <p>Базовый шанс такого номера ${pc.toLocaleString('ru-RU')}%, это примерно 1 из ${Math.round(100 / pc)} круток.</p>
+      <div class="info" style="margin-top:0;min-height:0">${infoHTML(p)}</div>
       <button class="btn btn-main" data-share="${i}">Похвастаться</button><button class="btn btn-ghost" data-close>Закрыть</button>`);
   }
 

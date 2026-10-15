@@ -197,9 +197,32 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 .orow .pc{font-family:var(--f-mono);font-size:13px;text-align:right}
 .orow p{grid-column:1 / -1;margin:0;font-size:12.5px;color:var(--muted)}
 
+/* админка */
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kpi{padding:12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);min-width:0}
+.kpi b{display:block;font-family:var(--f-mono);font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi span{display:block;font-size:12px;color:var(--muted)}
+.kpi small{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
+.chart{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px;align-items:end;height:84px;padding-top:14px}
+.chart div{position:relative;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.chart div.z{background:var(--panel-2)}
+.chart div em{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-style:normal;font-family:var(--f-mono);font-size:9.5px;color:var(--muted);margin-bottom:2px;white-space:nowrap}
+.chart-x{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--faint);margin-top:4px}
+.urow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:11px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:left;width:100%}
+.urow b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.urow span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.urow .num{font-family:var(--f-mono);font-size:13px;text-align:right;color:var(--text)}
+.urow.off{opacity:.55}
+.search{width:100%;padding:11px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:15px}
+.ta{width:100%;min-height:120px;padding:12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font:inherit;font-size:15px;color:var(--text);resize:vertical}
+.row-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.row-actions .btn{padding:11px 6px;font-size:13.5px}
+.rare-row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:center}
+.ok-pill{color:var(--c-uncommon)} .bad-pill{color:#ff6b5e}
+
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(12,15,19,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs nav{max-width:520px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
 .tabs button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 9px;font-size:11px;font-weight:600;color:var(--faint)}
 .tabs button svg{width:22px;height:22px}
 .tabs button[aria-current="page"]{color:var(--accent-hi)}
@@ -237,6 +260,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   <button data-tab="drum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M8 7v10M16 7v10"/></svg>Барабан</button>
   <button data-tab="coll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="4" width="7" height="7" rx="1.5"/><rect x="3.5" y="14" width="7" height="7" rx="1.5"/><rect x="13.5" y="14" width="7" height="7" rx="1.5"/></svg>Коллекция</button>
   <button data-tab="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z"/></svg>Магазин</button>
+  <button data-tab="admin" id="adminTab" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Админ</button>
   <button data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.1-5.3 7.5-5.3s6.1 1.7 7.5 5.3"/></svg>Профиль</button>
 </nav></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -246,11 +270,24 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 (() => {
   /* ======== настройки проекта ======== */
   const BOT_USERNAME = 'Ruletka_nomerov_bot';      // username бота без @, для реферальной ссылки
-  const API_BASE = '';                   // адрес вашего сервера для счетов Stars, если есть
+  const API_BASE = 'https://72-56-99-241.sslip.io';  // сервер игры: баланс, крутки, оплата Stars, админка
   const START_SPINS = 10, DAILY_SPINS = 3, REF_SPINS = 5;
 
   const tg = window.Telegram && window.Telegram.WebApp;
   const IN_TG = !!(tg && tg.initData);
+  const ONLINE = IN_TG && !!API_BASE;     // в Telegram баланс и крутки ведёт сервер, вне Telegram — демо в браузере
+  const SV = { daily: false, isAdmin: false, banned: false, invited: 0, offline: false };
+  async function api(path, body) {
+    try {
+      const r = await fetch(API_BASE + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: { 'Authorization': 'tma ' + tg.initData, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+      let d = {}; try { d = await r.json(); } catch (e) {}
+      return { ok: r.ok, status: r.status, d };
+    } catch (e) { return { ok: false, status: 0, d: {} }; }
+  }
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const plural = (n, a, b, c) => { n = Math.abs(n) % 100; const d = n % 10; return n > 10 && n < 20 ? c : d > 1 && d < 5 ? b : d === 1 ? a : c; };
@@ -438,12 +475,20 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   const mini = (p, i) => `<button class="mcard t-${p.t}" data-plate="${i}"><div class="plate-wrap">${plateHTML(p)}</div><div class="meta"><b>${TI[p.t].short}</b><span>${new Date(p.at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span></div><div class="rg">${esc(regionName(p.r))}</div></button>`;
 
   function paintBalance() { $('#balVal').textContent = S.balance; }
+  function applyProfile(p) {
+    if (!p || typeof p.balance !== 'number') return;
+    S.balance = p.balance; S.total = p.total; S.boostUntil = p.boost_until || 0;
+    SV.daily = !!p.daily_available; SV.isAdmin = !!p.is_admin; SV.banned = !!p.banned; SV.invited = p.invited || 0;
+    $('#adminTab').hidden = !SV.isAdmin;
+    save(); paintBalance();
+  }
+  const dailyReady = () => ONLINE ? SV.daily : S.lastDaily !== today();
 
   function render() {
     document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === UI.tab ? 'page' : 'false'));
     paintBalance();
     const v = $('#view');
-    v.innerHTML = UI.tab === 'drum' ? drumView() : UI.tab === 'coll' ? collView() : UI.tab === 'shop' ? shopView() : profileView();
+    v.innerHTML = UI.tab === 'drum' ? drumView() : UI.tab === 'coll' ? collView() : UI.tab === 'shop' ? shopView() : UI.tab === 'admin' ? adminView() : profileView();
   }
 
   function drumView() {
@@ -505,7 +550,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       <div class="plans">${body}</div>
       ${dailyCard()}`;
   }
-  const dailyCard = () => S.lastDaily !== today()
+  const dailyCard = () => dailyReady()
     ? `<div class="label"><span>Бесплатно</span><span></span></div><div class="card daily"><div><h3>Ежедневный бонус</h3><p>Заходите каждый день и забирайте +${DAILY_SPINS} ${spinsWord(DAILY_SPINS)}.</p></div><button class="btn btn-main" style="width:auto;padding:11px 16px" data-daily>Забрать</button></div>`
     : '';
 
@@ -610,8 +655,22 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
         <button class="btn btn-main" data-go="shop">В магазин</button><button class="btn btn-ghost" data-close>Закрыть</button>`);
     }
     UI.spinning = true; UI.revealed = false;
-    S.balance -= n; S.total += n;
-    const res = Array.from({ length: n }, () => makePlate());
+    let res;
+    if (ONLINE) {
+      ['#spin1', '#spin10'].forEach(s => { const b = $(s); if (b) b.disabled = true; });
+      const r = await api('/api/spin', { n, region: S.settings.region || null });
+      if (!r.ok) {
+        UI.spinning = false; render();
+        if (r.status === 402) { applyProfile(r.d); return spin(n); }
+        if (r.status === 403) return toast('Аккаунт заблокирован. Напишите в поддержку бота: /paysupport');
+        return toast('Нет связи с сервером. Крутка не списана, попробуйте ещё раз');
+      }
+      res = r.d.plates.map(p => ({ l: [...p.l], d: p.d, r: p.r, t: p.t, at: p.at }));
+      applyProfile(r.d);
+    } else {
+      S.balance -= n; S.total += n;
+      res = Array.from({ length: n }, () => makePlate());
+    }
     const best = res.reduce((a, b) => TI[b.t].rank > TI[a.t].rank ? b : a);
     S.coll.unshift(...[...res].reverse()); if (S.coll.length > 1000) S.coll.length = 1000;
     save(); paintBalance(); vib('medium');
@@ -688,7 +747,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
         ${sw('showOdds', 'Шансы под барабаном', 'Полоска с вероятностями редкостей')}
         <div class="set-row"><div><b>Мой регион</b><span>Все номера будут с этим кодом. Пусто, если случайный</span></div>
           <input class="reg-in" id="regIn" inputmode="numeric" maxlength="3" placeholder="—" value="${esc(st.region)}" aria-label="Код региона"></div>
-        <div class="set-row"><div><b>Сбросить прогресс</b><span>Удалит коллекцию и вернёт ${START_SPINS} круток</span></div>
+        <div class="set-row"><div><b>Сбросить прогресс</b><span>${ONLINE ? 'Удалит коллекцию на этом телефоне. Баланс круток останется' : `Удалит коллекцию и вернёт ${START_SPINS} круток`}</span></div>
           ${UI.resetAsk ? '<div class="mini-seg"><button class="danger" data-reset="yes">Удалить</button><button data-reset="no">Отмена</button></div>' : '<button class="btn btn-ghost danger" style="width:auto;padding:8px 12px" data-reset="ask">Сбросить</button>'}</div>
       </div>
       <button class="btn btn-ghost" data-close>Готово</button>`);
@@ -711,12 +770,20 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   async function purchase(id) {
     const item = PACKS.find(x => x.id === id) || BOOSTS.find(x => x.id === id); if (!item) return;
     closeSheet();
-    if (!IN_TG) { grant(item); return toast('Демо: начислено без оплаты'); }
-    try {
-      const r = await fetch(API_BASE + '/api/invoice', { method: 'POST', headers: { 'Authorization': 'tma ' + tg.initData, 'Content-Type': 'application/json' }, body: JSON.stringify({ item: id }) });
-      const d = await r.json(); if (!r.ok || !d.invoice_url) throw new Error();
-      tg.openInvoice(d.invoice_url, status => { if (status === 'paid') { grant(item); vib('win'); toast(item.n ? `+${item.n} ${spinsWord(item.n)}` : 'Удача ×2 включена'); } });
-    } catch (e) { toast('Оплата пока не подключена'); }
+    if (!ONLINE) { grant(item); return toast('Демо: начислено без оплаты'); }
+    const r = await api('/api/invoice', { item: id });
+    if (!r.ok || !r.d.invoice_url) return toast('Не удалось открыть оплату. Попробуйте ещё раз через минуту');
+    tg.openInvoice(r.d.invoice_url, async status => {
+      if (status !== 'paid') { if (status === 'failed') toast('Оплата не прошла'); return; }
+      vib('win'); toast('Оплата прошла, начисляем…');
+      const before = S.balance + S.boostUntil;
+      for (let i = 0; i < 8; i++) {          // бот получает подтверждение оплаты через секунду-две
+        await new Promise(res => setTimeout(res, 1000));
+        const m = await api('/api/me', {});
+        if (m.ok) { applyProfile(m.d); if (S.balance + S.boostUntil !== before) break; }
+      }
+      render(); toast(item.n ? `+${item.n} ${spinsWord(item.n)}` : 'Удача ×2 включена');
+    });
   }
   function buySheet(id) {
     const item = PACKS.find(x => x.id === id) || BOOSTS.find(x => x.id === id); if (!item) return;
@@ -730,7 +797,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     const t = e.target.closest('button,[data-scrim]'); if (!t) return;
     const d = t.dataset;
     if (d.scrim !== undefined) { if (e.target === t) closeSheet(); return; }
-    if (d.tab) { if (UI.spinning) return toast('Дождитесь остановки барабана'); if (UI.tab === d.tab) return; vib(); UI.tab = d.tab; scrollTo(0, 0); return render(); }
+    if (d.tab) { if (UI.spinning) return toast('Дождитесь остановки барабана'); if (UI.tab === d.tab) return; vib(); UI.tab = d.tab; scrollTo(0, 0); render(); if (d.tab === 'admin') adminLoad(); return; }
     if (t.id === 'spin1') return spin(1);
     if (t.id === 'spin10') return spin(10);
     if (d.odds !== undefined) return oddsSheet();
@@ -747,10 +814,19 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     if (d.reset) {
       if (d.reset === 'ask') { UI.resetAsk = true; return settingsSheet(); }
       if (d.reset === 'no') { UI.resetAsk = false; return settingsSheet(); }
+      if (ONLINE) { S.coll = []; save(); UI.current = makePlate('common'); UI.revealed = false; closeSheet(); render(); return toast('Коллекция очищена'); }
       const keep = S.settings; S = defaults(); S.settings = keep; save();
       UI.current = makePlate('common'); UI.revealed = false; closeSheet(); render(); return toast('Прогресс сброшен');
     }
     if (d.daily !== undefined) {
+      if (ONLINE) {
+        t.disabled = true;
+        const r = await api('/api/daily', {});
+        applyProfile(r.d);
+        if (r.ok) { vib('win'); toast(`+${r.d.bonus} ${spinsWord(r.d.bonus)}`); }
+        else toast(r.status === 409 ? 'Бонус уже получен, приходите завтра' : 'Нет связи с сервером, попробуйте ещё раз');
+        return render();
+      }
       if (S.lastDaily === today()) return toast('Бонус уже получен, приходите завтра');
       S.lastDaily = today(); S.balance += DAILY_SPINS; save(); vib('win'); toast(`+${DAILY_SPINS} ${spinsWord(DAILY_SPINS)}`); return render();
     }
@@ -760,6 +836,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       if (IN_TG) tg.openTelegramLink(url); else toast('В Telegram откроется выбор чата');
       return;
     }
+    if (d.adm !== undefined) return adminClick(t, d);
     if (t.id === 'balBtn') { if (UI.spinning) return; UI.tab = 'shop'; return render(); }
     if (t.id === 'copyRef') {
       const link = $('#refLink').dataset.full;
@@ -773,12 +850,177 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     }
   });
 
+  /* ======== админка ======== */
+  const A = { sec: 'stats', stats: null, users: null, q: '', sort: 'new', pays: null, bc: null, ask: null };
+  const fmtN = n => Number(n || 0).toLocaleString('ru-RU');
+  const fmtD = ms => ms ? new Date(ms).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const uname = u => u.username ? '@' + u.username : (u.first_name || 'Без имени');
+  const usd = st => '≈ $' + (st * 0.013).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  async function adminLoad(force) {
+    if (A.sec === 'stats' && (force || !A.stats)) { const r = await api('/api/admin/stats'); A.stats = r.ok ? r.d : { err: 1 }; }
+    if (A.sec === 'users' && (force || !A.users)) { const r = await api(`/api/admin/users?sort=${A.sort}&q=${encodeURIComponent(A.q)}`); A.users = r.ok ? r.d.users : []; }
+    if (A.sec === 'pays' && (force || !A.pays)) { const r = await api('/api/admin/payments'); A.pays = r.ok ? r.d.payments : []; }
+    if (A.sec === 'bc' && (force || !A.bc)) { const r = await api('/api/admin/broadcast', { text: '' }); A.bc = r.d; }
+    if (UI.tab === 'admin') render();
+  }
+  function chart(days, key) {
+    const max = Math.max(1, ...days.map(x => x[key]));
+    return `<div class="chart">${days.map(x => `<div class="${x[key] ? '' : 'z'}" style="height:${Math.max(3, x[key] / max * 100)}%">${x[key] === max && max > 0 ? `<em>${fmtN(x[key])}</em>` : ''}</div>`).join('')}</div>
+      <div class="chart-x"><span>${days[0].day}</span><span>сегодня</span></div>`;
+  }
+  function adminView() {
+    if (!SV.isAdmin) return '<div class="empty"><b>Нет доступа</b></div>';
+    const tabs = [['stats', 'Обзор'], ['users', 'Игроки'], ['pays', 'Платежи'], ['bc', 'Рассылка']];
+    let body = '<p class="sub" style="margin-top:14px">Загружаем…</p>';
+    if (A.sec === 'stats' && A.stats && !A.stats.err) {
+      const s = A.stats, tot = Object.values(s.tiers).reduce((a, b) => a + b, 0) || 1;
+      body = `
+        <div class="kpis" style="margin-top:14px">
+          <div class="kpi"><span>Игроков</span><b>${fmtN(s.users)}</b><small>+${fmtN(s.users_today)} сегодня, +${fmtN(s.users_7d)} за неделю</small></div>
+          <div class="kpi"><span>Играли</span><b>${fmtN(s.active_today)}</b><small>сегодня · ${fmtN(s.active_7d)} за 7 дней</small></div>
+          <div class="kpi"><span>Звёзд получено</span><b>${fmtN(s.stars)} ⭐</b><small>${usd(s.stars)} при выводе</small></div>
+          <div class="kpi"><span>За 30 дней</span><b>${fmtN(s.stars_30d)} ⭐</b><small>сегодня ${fmtN(s.stars_today)} ⭐</small></div>
+          <div class="kpi"><span>Покупок</span><b>${fmtN(s.payments)}</b><small>платили ${fmtN(s.payers)} чел.${s.refunds ? ` · возвратов ${s.refunds}` : ''}</small></div>
+          <div class="kpi"><span>Круток</span><b>${fmtN(s.spins)}</b><small>сегодня ${fmtN(s.spins_today)}</small></div>
+        </div>
+        <div class="label"><span>Звёзды по дням</span><span>14 дней</span></div><div class="card">${chart(s.days, 'stars')}</div>
+        <div class="label"><span>Новые игроки</span><span>14 дней</span></div><div class="card">${chart(s.days, 'users')}</div>
+        ${s.items.length ? `<div class="label"><span>Что покупают</span><span></span></div><div class="list" style="display:grid;gap:8px">${s.items.map(it => `<div class="urow"><b>${esc(it.title)}</b><span class="num">${fmtN(it.stars)} ⭐</span><span>${it.n} ${plural(it.n, 'покупка', 'покупки', 'покупок')}</span></div>`).join('')}</div>` : ''}
+        <div class="label"><span>Выпало номеров</span><span>${fmtN(tot)}</span></div>
+        <div class="card bars">${[...TIERS].reverse().map(t => `<div class="r t-${t.id}"><span><i></i>${t.name}</span><div class="track"><div style="width:${s.tiers[t.id] / tot * 100}%"></div></div><b>${fmtN(s.tiers[t.id])}</b></div>`).join('')}</div>
+        ${s.rare.length ? `<div class="label"><span>Последние редкие</span><span></span></div><div style="display:grid;gap:10px">${s.rare.map(p => `<div class="rare-row t-${p.t}"><div class="plate-wrap">${plateHTML({ l: [...p.l], d: p.d, r: p.r })}</div><div style="min-width:0"><b style="color:var(--tc);font-size:13px">${TI[p.t].name}</b><div class="sub" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(uname(p))} · ${fmtD(p.at)}</div></div></div>`).join('')}</div>` : ''}`;
+    } else if (A.sec === 'stats' && A.stats && A.stats.err) {
+      body = '<div class="empty" style="margin-top:14px"><b>Сервер не ответил</b>Проверьте, что бот запущен, и обновите.</div>';
+    }
+    if (A.sec === 'users') {
+      const sorts = [['new', 'Новые'], ['paid', 'Больше платят'], ['spins', 'Больше крутят'], ['seen', 'Недавно играли']];
+      body = `<div style="display:grid;gap:10px;margin-top:14px">
+        <input class="search" id="admQ" placeholder="Поиск: ID, @username или имя" value="${esc(A.q)}" autocomplete="off" aria-label="Поиск игрока">
+        <div class="chips">${sorts.map(([k, l]) => `<button class="chip" data-adm="sort" data-v="${k}" aria-pressed="${A.sort === k}">${l}</button>`).join('')}</div>
+        ${A.users === null ? '<p class="sub">Загружаем…</p>' : A.users.length ? A.users.map(u => `
+          <button class="urow ${u.banned ? 'off' : ''}" data-adm="user" data-v="${u.id}">
+            <b>${esc(uname(u))}${u.banned ? ' · заблокирован' : ''}</b><span class="num">${fmtN(u.stars_spent)} ⭐</span>
+            <span>ID ${u.id} · с ${new Date(u.created_at).toLocaleDateString('ru-RU')}</span><span class="num" style="color:var(--muted)">${fmtN(u.balance)} кр. · ${fmtN(u.total_spins)} спинов</span>
+          </button>`).join('') : '<div class="empty"><b>Никого не нашли</b>Проверьте ID или имя.</div>'}
+      </div>`;
+    }
+    if (A.sec === 'pays') {
+      body = `<div style="display:grid;gap:8px;margin-top:14px">${A.pays === null ? '<p class="sub">Загружаем…</p>' : A.pays.length ? A.pays.map(p => `
+        <button class="urow ${p.refunded ? 'off' : ''}" data-adm="pay" data-v="${p.id}">
+          <b>${esc(p.title)}</b><span class="num">${fmtN(p.stars)} ⭐</span>
+          <span>${esc(uname(p))} · ${fmtD(p.created_at)}</span><span class="num ${p.refunded ? 'bad-pill' : 'ok-pill'}" style="font-size:12px">${p.refunded ? 'возврат' : 'оплачен'}</span>
+        </button>`).join('') : '<div class="empty"><b>Покупок пока нет</b>Здесь появится каждая оплата звёздами.</div>'}</div>`;
+    }
+    if (A.sec === 'bc') {
+      const b = A.bc || {};
+      body = `<div class="card" style="margin-top:14px">
+        <p>Сообщение получат все игроки, кроме заблокированных. Под ним будет кнопка «Крутить барабан».</p>
+        <textarea class="ta" id="admText" maxlength="3500" placeholder="Например: Сегодня шанс блатных номеров выше! Заходи крутить 🎰" aria-label="Текст рассылки"></textarea>
+        ${A.ask === 'bc' ? `<p style="color:var(--text)">Отправить всем игрокам?</p><div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-main" data-adm="bcgo">Да, отправить</button><button class="btn btn-ghost" data-adm="cancel">Отмена</button></div>`
+          : `<button class="btn btn-main" data-adm="bcask" ${b.running ? 'disabled' : ''}>Отправить всем</button>`}
+        ${b.total ? `<p>${b.running ? 'Идёт рассылка' : 'Последняя рассылка'}: доставлено ${fmtN(b.sent)} из ${fmtN(b.total)}${b.failed ? `, не дошло ${fmtN(b.failed)} (бот заблокирован у игрока)` : ''}.</p>` : ''}
+      </div>`;
+    }
+    return `<h1>Админ</h1><p class="sub">Статистика игры видна только вам.</p>
+      <div class="chips" style="margin-top:14px">${tabs.map(([k, l]) => `<button class="chip" data-adm="sec" data-v="${k}" aria-pressed="${A.sec === k}">${l}</button>`).join('')}
+      <button class="chip" data-adm="reload" aria-label="Обновить">↻ Обновить</button></div>${body}`;
+  }
+  async function userSheet(id) {
+    const r = await api('/api/admin/user?id=' + id);
+    if (!r.ok) return toast('Не удалось загрузить игрока');
+    const { user: u, tiers, best, payments, invited } = r.d, tot = Object.values(tiers).reduce((a, b) => a + b, 0) || 1;
+    sheet(`<h3>${esc(uname(u))}</h3>
+      <p>ID <b style="color:var(--text)">${u.id}</b>${u.first_name ? ' · ' + esc(u.first_name) : ''} · с ${new Date(u.created_at).toLocaleDateString('ru-RU')} · был ${fmtD(u.last_seen)}${u.banned ? ' · <b class="bad-pill">заблокирован</b>' : ''}</p>
+      <div class="kpis">
+        <div class="kpi"><span>Баланс</span><b>${fmtN(u.balance)}</b><small>${u.boost_until > Date.now() ? 'удача ×2 до ' + fmtD(u.boost_until) : 'круток'}</small></div>
+        <div class="kpi"><span>Заплатил</span><b>${fmtN(u.stars_spent)} ⭐</b><small>${payments.filter(p => !p.refunded).length} покупок</small></div>
+        <div class="kpi"><span>Прокрутил</span><b>${fmtN(u.total_spins)}</b><small>раз</small></div>
+        <div class="kpi"><span>Пригласил</span><b>${fmtN(invited.length)}</b><small>друзей${u.ref_by ? ' · сам пришёл от ' + u.ref_by : ''}</small></div>
+      </div>
+      ${best ? `<div class="plate-wrap drum won t-${best.t}">${plateHTML({ l: [...best.l], d: best.d, r: best.r })}</div><p>Лучший номер: <b class="t-${best.t}" style="color:var(--tc)">${TI[best.t].name}</b></p>` : ''}
+      <div class="card bars">${[...TIERS].reverse().map(t => `<div class="r t-${t.id}"><span><i></i>${t.name}</span><div class="track"><div style="width:${tiers[t.id] / tot * 100}%"></div></div><b>${fmtN(tiers[t.id])}</b></div>`).join('')}</div>
+      ${payments.length ? `<div style="display:grid;gap:6px">${payments.map(p => `<div class="urow ${p.refunded ? 'off' : ''}"><b>${esc(p.title)}</b><span class="num">${p.stars} ⭐</span><span>${fmtD(p.created_at)}</span><span class="num" style="font-size:12px">${p.refunded ? 'возврат' : ''}</span></div>`).join('')}</div>` : ''}
+      <p style="color:var(--text);font-weight:600">Начислить крутки</p>
+      <div class="row-actions"><button class="btn btn-ghost" data-adm="grant" data-v="${u.id}" data-n="10">+10</button><button class="btn btn-ghost" data-adm="grant" data-v="${u.id}" data-n="50">+50</button><button class="btn btn-ghost" data-adm="grant" data-v="${u.id}" data-n="-10">−10</button></div>
+      ${A.ask === 'ban' + u.id ? `<p style="color:var(--text)">${u.banned ? 'Разблокировать' : 'Заблокировать'} игрока?</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-main" data-adm="bango" data-v="${u.id}" data-n="${u.banned ? 0 : 1}">Да</button><button class="btn btn-ghost" data-adm="cancelsheet" data-v="${u.id}">Отмена</button></div>`
+        : `<button class="btn btn-ghost ${u.banned ? '' : 'danger'}" data-adm="banask" data-v="${u.id}">${u.banned ? 'Разблокировать' : 'Заблокировать'}</button>`}
+      <button class="btn btn-ghost" data-close>Закрыть</button>`);
+  }
+  function paySheet(id) {
+    const p = (A.pays || []).find(x => x.id === id); if (!p) return;
+    sheet(`<h3>${esc(p.title)} · ${p.stars} ⭐</h3>
+      <p>${esc(uname(p))} (ID ${p.user_id}) · ${fmtD(p.created_at)}</p>
+      <p>Номер платежа: <code style="font-family:var(--f-mono);font-size:11.5px;overflow-wrap:anywhere">${esc(p.charge_id)}</code></p>
+      ${p.refunded ? '<p class="bad-pill">Звёзды уже возвращены.</p>' : A.ask === 'ref' + p.id
+        ? `<p style="color:var(--text)">Вернуть ${p.stars} ⭐ игроку? Купленное спишется с его баланса.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-main" data-adm="refgo" data-v="${p.id}">Вернуть</button><button class="btn btn-ghost" data-adm="cancelpay" data-v="${p.id}">Отмена</button></div>`
+        : `<button class="btn btn-ghost danger" data-adm="refask" data-v="${p.id}">Вернуть звёзды</button>`}
+      <button class="btn btn-ghost" data-adm="user" data-v="${p.user_id}">Открыть игрока</button>
+      <button class="btn btn-ghost" data-close>Закрыть</button>`);
+  }
+  async function adminClick(t, d) {
+    const a = d.adm, v = d.v;
+    if (a === 'sec') { A.sec = v; A.ask = null; render(); return adminLoad(); }
+    if (a === 'reload') { toast('Обновляем…'); return adminLoad(true); }
+    if (a === 'sort') { A.sort = v; A.users = null; render(); return adminLoad(true); }
+    if (a === 'user') { A.ask = null; return userSheet(+v); }
+    if (a === 'pay') { A.ask = null; return paySheet(+v); }
+    if (a === 'grant') {
+      const r = await api('/api/admin/grant', { id: +v, spins: +d.n, notify: +d.n > 0 });
+      if (r.ok) { toast(`${+d.n > 0 ? 'Начислено' : 'Списано'}: ${Math.abs(+d.n)}. Баланс ${r.d.balance}`); A.users = null; return userSheet(+v); }
+      return toast('Не получилось, попробуйте ещё раз');
+    }
+    if (a === 'banask') { A.ask = 'ban' + v; return userSheet(+v); }
+    if (a === 'cancelsheet') { A.ask = null; return userSheet(+v); }
+    if (a === 'bango') { const r = await api('/api/admin/ban', { id: +v, ban: d.n === '1' }); A.ask = null; A.users = null; toast(r.ok ? (d.n === '1' ? 'Игрок заблокирован' : 'Игрок разблокирован') : 'Не получилось'); return userSheet(+v); }
+    if (a === 'refask') { A.ask = 'ref' + v; return paySheet(+v); }
+    if (a === 'cancelpay') { A.ask = null; return paySheet(+v); }
+    if (a === 'refgo') {
+      t.disabled = true;
+      const r = await api('/api/admin/refund', { payment_id: +v });
+      A.ask = null;
+      if (!r.ok) { toast(r.status === 409 ? 'Уже возвращено' : 'Telegram не принял возврат'); return paySheet(+v); }
+      toast('Звёзды возвращены'); closeSheet(); A.pays = null; A.stats = null; return adminLoad(true);
+    }
+    if (a === 'bcask') {
+      const txt = ($('#admText') || {}).value || '';
+      if (!txt.trim()) return toast('Напишите текст сообщения');
+      A.bcText = txt; A.ask = 'bc'; render(); $('#admText').value = txt; return;
+    }
+    if (a === 'cancel') { A.ask = null; const txt = A.bcText || ''; render(); if ($('#admText')) $('#admText').value = txt; return; }
+    if (a === 'bcgo') {
+      const r = await api('/api/admin/broadcast', { text: A.bcText || '' });
+      A.ask = null; A.bc = r.d; A.bcText = ''; render();
+      if (!r.ok) return toast(r.status === 409 ? 'Предыдущая рассылка ещё идёт' : 'Не получилось отправить');
+      toast('Рассылка запущена');
+      const poll = setInterval(async () => { await adminLoad(true); if (!A.bc || !A.bc.running || A.sec !== 'bc') clearInterval(poll); }, 3000);
+    }
+  }
+  let qTimer;
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'admQ') return;
+    clearTimeout(qTimer);
+    qTimer = setTimeout(async () => {
+      A.q = e.target.value.trim();
+      const r = await api(`/api/admin/users?sort=${A.sort}&q=${encodeURIComponent(A.q)}`);
+      A.users = r.ok ? r.d.users : [];
+      const pos = e.target.selectionStart; render(); const inp = $('#admQ'); if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
+    }, 350);
+  });
+
   /* ======== запуск ======== */
   if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor('#0c0f13'); tg.setBackgroundColor('#0c0f13'); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {} }
   $('#demo').hidden = IN_TG;
   const start = (location.hash || '').slice(1);
   if (['drum', 'coll', 'shop', 'profile'].includes(start)) UI.tab = start;
   render();
+  if (ONLINE) (async () => {
+    const r = await api('/api/me', {});
+    if (!r.ok) { SV.offline = true; return toast('Нет связи с сервером игры. Проверьте интернет и откройте игру заново'); }
+    applyProfile(r.d);
+    if (!UI.spinning) render();
+    if (SV.banned) toast('Аккаунт заблокирован. Напишите в поддержку бота: /paysupport');
+    if (!r.d.imported && S.coll.length) api('/api/import', { plates: S.coll.slice(0, 1000).map(p => ({ l: p.l, d: p.d, r: p.r, at: p.at })) });
+  })();
   if (migrated) setTimeout(() => toast(`Коллекция перенесена из старой версии: ${migrated} ${plural(migrated,'номер','номера','номеров')}`), 400);
 })();
 </script>

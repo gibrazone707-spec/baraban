@@ -1,0 +1,3 @@
+server/.env
+*.db
+__pycache__/

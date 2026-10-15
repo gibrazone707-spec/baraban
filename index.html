@@ -562,7 +562,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   }
 
   const PACKS = [ { id: 's10', n: 10, stars: 25 }, { id: 's50', n: 50, stars: 100 }, { id: 's120', n: 120, stars: 200 }, { id: 's300', n: 300, stars: 450 } ];
-  const BOOSTS = [ { id: 'b1', name: 'Удача ×2', days: 1, stars: 49 }, { id: 'b7', name: 'Удача ×2', days: 7, stars: 199 } ];
+  const BOOSTS = [ { id: 'b1', name: 'Удача ×2', days: 1, stars: 49, about: 'Шанс Блатного и выше в два раза больше' }, { id: 'b7', name: 'Удача ×2', days: 7, stars: 199, about: 'Шанс Эксклюзивного в два раза больше' } ];
   function shopView() {
     let body;
     if (UI.shopKind === 'spins') {
@@ -575,7 +575,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       body = BOOSTS.map(b => `<button class="plan" data-buy="${b.id}">
         <span class="nm">${b.name} · ${b.days === 1 ? '24 часа' : b.days + ' дней'}</span>
         <span class="price"><b>${b.stars} ⭐</b><span>${b.days === 1 ? 'сутки' : (b.stars / b.days).toFixed(0) + ' ⭐ в день'}</span></span>
-        <span class="qty">Шанс Редкого и выше в два раза больше</span></button>`).join('');
+        <span class="qty">${b.about}</span></button>`).join('');
     }
     return `<h1>Магазин</h1>
       <p class="sub">На счету <b style="color:var(--text)">${S.balance}</b> ${spinsWord(S.balance)}${boostOn() ? `, удача ×2 до ${new Date(S.boostUntil).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}. Оплата в Telegram Stars.</p>
@@ -819,7 +819,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   function buySheet(id) {
     const item = PACKS.find(x => x.id === id) || BOOSTS.find(x => x.id === id); if (!item) return;
     const title = item.n ? `${item.n} ${spinsWord(item.n)}` : `${item.name} на ${item.days === 1 ? 'сутки' : item.days + ' дней'}`;
-    sheet(`<h3>${title}</h3><p>${item.n ? 'Крутки не сгорают, тратьте когда удобно.' : 'Шанс Редкого, Блатного и Эксклюзивного номера удваивается. Если буст уже действует, время прибавится.'}</p>
+    sheet(`<h3>${title}</h3><p>${item.n ? 'Крутки не сгорают, тратьте когда удобно.' : item.about + '. Если буст уже действует, время прибавится.'}</p>
       <button class="btn btn-main" data-pay="${id}">Оплатить ${item.stars} ⭐</button><button class="btn btn-ghost" data-close>Отмена</button>`);
   }
 

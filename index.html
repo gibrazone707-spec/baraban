@@ -280,6 +280,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
   const tg = window.Telegram && window.Telegram.WebApp;
   const IN_TG = !!(tg && tg.initData);
   const ONLINE = IN_TG && !!API_BASE;     // в Telegram баланс и крутки ведёт сервер, вне Telegram — демо в браузере
+  // режим для съёмки видео: только в браузере (вне Telegram), по ссылке с ?video — выпадают только эксклюзивные номера
+  const VIDEO = !IN_TG && new URLSearchParams(location.search).has('video');
   const SV = { daily: false, isAdmin: false, banned: false, invited: 0, offline: false };
   async function api(path, body) {
     try {
@@ -432,7 +434,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     for (let i = TIERS.length - 1; i > 0; i--) { if (r < o[i]) return TIERS[i].id; r -= o[i]; }
     return 'common';
   }
-  function makePlate(tier = rollTier()) {
+  function makePlate(tier = VIDEO ? 'excl' : rollTier()) {
     let p; for (let i = 0; i < 400; i++) { p = candidate(tier); if (classify(p) === tier) break; }
     const t = classify(p);
     const r = S.settings.region || ((t === 'excl' || t === 'blat' || (t === 'rare' && rand(2))) ? pick(PREMIUM_REG) : pick(REGIONS));
@@ -1040,7 +1042,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 
   /* ======== запуск ======== */
   if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor('#0c0f13'); tg.setBackgroundColor('#0c0f13'); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {} }
-  $('#demo').hidden = IN_TG;
+  $('#demo').hidden = IN_TG || VIDEO;
+  if (VIDEO && S.balance < 500) { S.balance = 999; save(); }
   const start = (location.hash || '').slice(1);
   if (['drum', 'coll', 'shop', 'profile'].includes(start)) UI.tab = start;
   render();

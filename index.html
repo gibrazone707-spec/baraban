@@ -97,7 +97,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
 .odds{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:14px;gap:2px}
 .odds span{background:var(--tc);min-width:3px}
 .odds-legend{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--f-mono);font-size:11px;color:var(--faint)}
-.info{text-align:center;margin-top:10px;min-height:78px}
+.info{text-align:center;margin-top:10px;overflow:hidden}
 .info b{display:block;font-size:14.5px;font-weight:600;text-wrap:balance}
 .info span{display:block;color:var(--muted);font-size:13px;margin-top:2px;text-wrap:balance}
 .info span.fd{font-size:12px;color:var(--faint);margin-top:1px}
@@ -657,11 +657,30 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
       requestAnimationFrame(frame);
     });
   }
+  // описание под номером: плавно раскрывается и сворачивается, шкала шансов и кнопки едут следом
+  function setInfo(html) {
+    const el = $('#plateInfo'); if (!el) return;
+    clearTimeout(el._t);
+    const from = el.offsetHeight;
+    el.style.transition = 'none'; el.style.height = from + 'px'; void el.offsetHeight;
+    if (!html) {
+      el.style.transition = 'height .45s cubic-bezier(.4,0,.2,1), opacity .22s ease';
+      el.style.height = '0px'; el.style.opacity = '0';
+      el._t = setTimeout(() => { el.innerHTML = ''; }, 460);
+      return;
+    }
+    el.innerHTML = html;
+    el.style.height = 'auto'; const to = el.offsetHeight;
+    el.style.height = from + 'px'; el.style.opacity = '0'; void el.offsetHeight;
+    el.style.transition = 'height .55s cubic-bezier(.22,.8,.3,1), opacity .4s ease .12s';
+    el.style.height = to + 'px'; el.style.opacity = '1';
+    el._t = setTimeout(() => { el.style.height = ''; el.style.transition = ''; }, 580);
+  }
   async function animate(p) {
     const drum = $('#drum'); if (!drum) return;
     drum.className = 'plate-wrap drum spinning';
     $('#tierLbl').innerHTML = '<small>Крутится…</small>';
-    $('#plateInfo').innerHTML = '';
+    setInfo('');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sp = SPEED[reduce ? 'instant' : S.settings.speed] || SPEED.smooth;
     const regEl = drum.querySelector('[data-i="6"]');
@@ -677,7 +696,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.2;m
     UI.revealed = true;
     drum.className = `plate-wrap drum won land t-${p.t}` + (TI[p.t].rank >= 2 ? ' shine' : '');
     $('#tierLbl').innerHTML = tierBadge(p.t);
-    $('#plateInfo').innerHTML = infoHTML(p);
+    setInfo(infoHTML(p));
     chime(p.t);
     if (TI[p.t].rank >= 2) { vib('win'); confetti(p.t); } else vib('light');
   }
